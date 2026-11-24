@@ -17,7 +17,24 @@
 @if (!care.isAuthenticated()) {
   <router-outlet />
 } @else {
-  <div class="min-h-screen flex flex-col">
+  @if (!care.isRedDashboardActive()) {
+    <!-- Subtle Ambient Hospital Backdrop (hidden during >2 lbs red alert state) -->
+    <video
+      autoplay
+      loop
+      muted
+      playsinline
+      [muted]="true"
+      preload="auto"
+      aria-hidden="true"
+      class="ambient-bg-video fixed inset-0 w-full h-full object-cover pointer-events-none z-0"
+    >
+      <source src="hospital-bg.mp4" type="video/mp4" />
+    </video>
+    <div class="fixed inset-0 bg-[#F8F7F2]/88 pointer-events-none z-0"></div>
+  }
+
+  <div class="relative z-10 min-h-screen flex flex-col">
     <!-- Top Header -->
     <header class="alert-surface-header sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-august-border px-4 lg:px-8 py-3 flex items-center justify-between shadow-xs transition-colors">
       <div class="flex items-center gap-3">

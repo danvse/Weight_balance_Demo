@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, DestroyRef, ElementRef, inject, input, viewChild } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, ElementRef, effect, inject, input, viewChild } from '@angular/core';
 
 @Component({
   selector: 'app-hospital-bg',
@@ -12,23 +12,20 @@ import { AfterViewInit, Component, DestroyRef, ElementRef, inject, input, viewCh
         playsinline
         preload="auto"
         class="absolute inset-0 w-full h-full object-cover"
-      >
-        <source src="hospital-bg.mp4" type="video/mp4" />
-      </video>
+      ></video>
       <video
         #videoB
         muted
         playsinline
         preload="auto"
         class="absolute inset-0 w-full h-full object-cover"
-      >
-        <source src="hospital-bg.mp4" type="video/mp4" />
-      </video>
+      ></video>
     </div>
     <div [class]="scrimClass()"></div>
   `
 })
 export class HospitalBgComponent implements AfterViewInit {
+  readonly videoSrc = input<string>('hospital-bg.mp4');
   readonly scrimClass = input<string>('fixed inset-0 bg-[#F3F0E8]/35 pointer-events-none z-0');
 
   private readonly destroyRef = inject(DestroyRef);
@@ -39,6 +36,16 @@ export class HospitalBgComponent implements AfterViewInit {
   private activeIdx: 0 | 1 = 0;
   private isFading = false;
   private fadeTimer: ReturnType<typeof setTimeout> | null = null;
+  private currentSrc = '';
+  private initialized = false;
+
+  constructor() {
+    effect(() => {
+      const nextSrc = this.videoSrc();
+      if (!this.initialized || nextSrc === this.currentSrc) return;
+      this.switchVideoSource(nextSrc);
+    });
+  }
 
   ngAfterViewInit(): void {
     const a = this.videoA()?.nativeElement;
@@ -46,14 +53,16 @@ export class HospitalBgComponent implements AfterViewInit {
     if (!a || !b) return;
 
     const videos: [HTMLVideoElement, HTMLVideoElement] = [a, b];
+    this.currentSrc = this.videoSrc();
 
-    // Configure initial layer stack: A active on top, B preloaded underneath
     videos.forEach((v, idx) => {
       v.muted = true;
       v.defaultMuted = true;
+      v.src = this.currentSrc;
       v.style.opacity = '1';
       v.style.zIndex = idx === 0 ? '2' : '1';
       v.style.transition = idx === 0 ? `opacity ${this.fadeMs}ms ease-in-out` : 'none';
+      if (typeof v.load === 'function') v.load();
     });
 
     const onTick = (idx: 0 | 1) => {
@@ -85,6 +94,7 @@ export class HospitalBgComponent implements AfterViewInit {
     b.addEventListener('ended', onEndB);
 
     this.safePlay(a);
+    this.initialized = true;
 
     this.destroyRef.onDestroy(() => {
       a.removeEventListener('timeupdate', onTimeA);
@@ -95,21 +105,40 @@ export class HospitalBgComponent implements AfterViewInit {
     });
   }
 
-  private startCrossfade(videos: [HTMLVideoElement, HTMLVideoElement]): void {
+  private switchVideoSource(nextSrc: string): void {
+    const a = this.videoA()?.nativeElement;
+    const b = this.videoB()?.nativeElement;
+    if (!a || !b) return;
+
+    this.currentSrc = nextSrc;
+    const videos: [HTMLVideoElement, HTMLVideoElement] = [a, b];
+    const nextIdx: 0 | 1 = this.activeIdx === 0 ? 1 : 0;
+    const nextVideo = videos[nextIdx];
+
+    if (this.fadeTimer) {
+      clearTimeout(this.fadeTimer);
+      this.fadeTimer = null;
+    }
+    this.isFading = false;
+
+    nextVideo.src = nextSrc;
+    if (typeof nextVideo.load === 'function') nextVideo.load();
+    this.startCrossfade(videos, nextSrc);
+  }
+
+  private startCrossfade(videos: [HTMLVideoElement, HTMLVideoElement], syncOtherSrc?: string): void {
     this.isFading = true;
     const fromIdx = this.activeIdx;
     const toIdx: 0 | 1 = fromIdx === 0 ? 1 : 0;
     const fromVideo = videos[fromIdx];
     const toVideo = videos[toIdx];
 
-    // Prepare underlying next video at frame 0 with full opacity before dissolving top layer
     toVideo.style.transition = 'none';
     toVideo.style.zIndex = '1';
     toVideo.style.opacity = '1';
     toVideo.currentTime = 0;
     this.safePlay(toVideo);
 
-    // Dissolve active top video smoothly into the playing underlying video
     fromVideo.style.zIndex = '2';
     fromVideo.style.transition = `opacity ${this.fadeMs}ms ease-in-out`;
     void fromVideo.offsetWidth;
@@ -117,13 +146,16 @@ export class HospitalBgComponent implements AfterViewInit {
 
     if (this.fadeTimer) clearTimeout(this.fadeTimer);
     this.fadeTimer = setTimeout(() => {
-      // Promote incoming video to top while outgoing is invisible (opacity 0)
       toVideo.style.transition = 'none';
       toVideo.style.zIndex = '2';
 
       fromVideo.style.transition = 'none';
       fromVideo.style.zIndex = '1';
       fromVideo.pause();
+      if (syncOtherSrc) {
+        fromVideo.src = syncOtherSrc;
+        if (typeof fromVideo.load === 'function') fromVideo.load();
+      }
       fromVideo.currentTime = 0;
       fromVideo.style.opacity = '1';
 

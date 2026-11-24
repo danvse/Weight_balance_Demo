@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { UserRole } from '../../models/care.models';
@@ -12,7 +12,10 @@ import { HospitalBgComponent } from '../hospital-bg/hospital-bg.component';
   imports: [FormsModule, CustomIconComponent, HospitalBgComponent],
   template: `
     <section class="fixed inset-0 z-50 bg-[#F3F0E8] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-      <app-hospital-bg scrimClass="fixed inset-0 bg-[#F3F0E8]/35 pointer-events-none z-0" />
+      <app-hospital-bg
+        [videoSrc]="selectedAuthRole() === 'prescriber' ? 'clinic-bg.mp4' : 'hospital-bg.mp4'"
+        scrimClass="fixed inset-0 bg-[#F3F0E8]/35 pointer-events-none z-0"
+      />
 
       <div class="relative z-10 max-w-lg w-full bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-august-border overflow-hidden animate-slide-up p-6 sm:p-8 flex flex-col justify-between">
         <div>
@@ -240,6 +243,9 @@ export class AuthComponent {
   readonly activeTab = signal<'login' | 'signup'>('login');
   readonly loginRole = signal<UserRole>('patient');
   readonly signupRole = signal<UserRole>('patient');
+  readonly selectedAuthRole = computed<UserRole>(() =>
+    this.activeTab() === 'login' ? this.loginRole() : this.signupRole()
+  );
 
   loginEmail = 'robert.davis@patient.august.health';
   loginPassword = '••••••••••••';

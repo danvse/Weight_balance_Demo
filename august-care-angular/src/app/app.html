@@ -18,7 +18,10 @@
   <router-outlet />
 } @else {
   @if (!care.isRedDashboardActive()) {
-    <app-hospital-bg scrimClass="fixed inset-0 bg-[#F8F7F2]/75 pointer-events-none z-0" />
+    <app-hospital-bg
+      [videoSrc]="care.userRole() === 'prescriber' ? 'clinic-bg.mp4' : 'hospital-bg.mp4'"
+      scrimClass="fixed inset-0 bg-[#F8F7F2]/75 pointer-events-none z-0"
+    />
   }
 
   <div class="relative z-10 min-h-screen flex flex-col">

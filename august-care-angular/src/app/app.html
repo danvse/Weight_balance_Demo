@@ -18,20 +18,7 @@
   <router-outlet />
 } @else {
   @if (!care.isRedDashboardActive()) {
-    <!-- Subtle Ambient Hospital Backdrop (hidden during >2 lbs red alert state) -->
-    <video
-      autoplay
-      loop
-      muted
-      playsinline
-      [muted]="true"
-      preload="auto"
-      aria-hidden="true"
-      class="ambient-bg-video fixed inset-0 w-full h-full object-cover pointer-events-none z-0"
-    >
-      <source src="hospital-bg.mp4" type="video/mp4" />
-    </video>
-    <div class="fixed inset-0 bg-[#F8F7F2]/88 pointer-events-none z-0"></div>
+    <app-hospital-bg scrimClass="fixed inset-0 bg-[#F8F7F2]/75 pointer-events-none z-0" />
   }
 
   <div class="relative z-10 min-h-screen flex flex-col">

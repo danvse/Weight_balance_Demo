@@ -4,27 +4,15 @@ import { Router } from '@angular/router';
 import { UserRole } from '../../models/care.models';
 import { CareStateService } from '../../services/care-state.service';
 import { CustomIconComponent } from '../custom-icon/custom-icon.component';
+import { HospitalBgComponent } from '../hospital-bg/hospital-bg.component';
 
 @Component({
   selector: 'app-auth',
   standalone: true,
-  imports: [FormsModule, CustomIconComponent],
+  imports: [FormsModule, CustomIconComponent, HospitalBgComponent],
   template: `
     <section class="fixed inset-0 z-50 bg-[#F3F0E8] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-      <!-- Ambient Hospital Recovery Room Background Video -->
-      <video
-        autoplay
-        loop
-        muted
-        playsinline
-        [muted]="true"
-        preload="auto"
-        aria-hidden="true"
-        class="ambient-bg-video fixed inset-0 w-full h-full object-cover pointer-events-none"
-      >
-        <source src="hospital-bg.mp4" type="video/mp4" />
-      </video>
-      <div class="fixed inset-0 bg-[#F3F0E8]/55 backdrop-blur-[2px] pointer-events-none"></div>
+      <app-hospital-bg scrimClass="fixed inset-0 bg-[#F3F0E8]/35 pointer-events-none z-0" />
 
       <div class="relative z-10 max-w-lg w-full bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-august-border overflow-hidden animate-slide-up p-6 sm:p-8 flex flex-col justify-between">
         <div>

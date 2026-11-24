@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { CustomIconComponent } from './components/custom-icon/custom-icon.component';
+import { HospitalBgComponent } from './components/hospital-bg/hospital-bg.component';
 import { MascotBuddyComponent } from './components/mascot-buddy/mascot-buddy.component';
 import { SymptomGateComponent } from './components/symptom-gate/symptom-gate.component';
 import { UserRole } from './models/care.models';
@@ -9,7 +10,7 @@ import { CareStateService } from './services/care-state.service';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, CustomIconComponent, SymptomGateComponent, MascotBuddyComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CustomIconComponent, HospitalBgComponent, SymptomGateComponent, MascotBuddyComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

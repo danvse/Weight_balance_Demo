@@ -89,9 +89,3 @@ input:focus, select:focus, textarea:focus {
     padding-bottom: 5.5rem;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .ambient-bg-video {
-    display: none;
-  }
-}

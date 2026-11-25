@@ -230,7 +230,7 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
               }
               <button
                 type="button"
-                (click)="scrollToChecklist()"
+                (click)="isMedChecklistOpen.set(true)"
                 class="px-2.5 py-1.5 rounded-xl bg-august-ivory hover:bg-august-sage border border-august-border text-[11px] font-bold text-august-forest transition"
               >
                 Full Details
@@ -433,103 +433,6 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
                   }
                 </tbody>
               </table>
-            </div>
-          </div>
-
-          <!-- Interactive Daily Medication & Diuretic Checklist (Moved to Left Column for Balance) -->
-          <div id="daily-meds-checklist" class="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-3.5">
-            <div class="flex items-center justify-between gap-2">
-              <div class="flex items-center gap-2.5">
-                <div class="w-9 h-9 rounded-xl bg-august-sage text-august-forest flex items-center justify-center shrink-0">
-                  <app-icon name="pillDiuretic" iconClass="w-5 h-5 text-august-forest" />
-                </div>
-                <div>
-                  <h3 class="font-bold text-august-dark text-base">Daily Medication Checklist</h3>
-                  <p class="text-xs text-august-warmGray">
-                    {{ adherence().takenCount }} of {{ adherence().totalCount }} taken today • 7d diuretic rate {{ adherence().sevenDayRatePercent }}%
-                  </p>
-                </div>
-              </div>
-              <div class="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  (click)="care.markAllMedicationsTaken()"
-                  class="px-3 py-1.5 rounded-xl bg-august-ivory hover:bg-august-sage border border-august-border text-xs font-bold text-august-forest transition"
-                >
-                  Take All
-                </button>
-                <a routerLink="/profile" class="text-xs text-august-forest font-bold hover:underline">Edit Meds</a>
-              </div>
-            </div>
-
-            <div class="w-full h-2 rounded-full bg-august-ivory overflow-hidden border border-august-border/60">
-              <div
-                class="h-full rounded-full transition-all duration-300"
-                [class]="adherence().missedDiureticAlert ? 'bg-rose-600' : 'bg-august-forest'"
-                [style.width.%]="adherence().adherencePercent"
-              ></div>
-            </div>
-
-            <div
-              [class]="adherence().missedDiureticAlert
-                ? 'p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 font-semibold flex items-start gap-2'
-                : adherence().todayDiureticStatus === 'taken'
-                  ? 'p-3 rounded-2xl bg-emerald-50/80 border border-emerald-100 text-xs text-emerald-900 font-medium flex items-start gap-2'
-                  : 'p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 font-medium flex items-start gap-2'"
-            >
-              <app-icon [name]="adherence().missedDiureticAlert ? 'alertSiren' : 'checkSeal'" iconClass="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{{ adherence().correlationNote }}</span>
-            </div>
-
-            <div class="space-y-2">
-              @for (med of care.patient().medications; track med.id) {
-                <button
-                  type="button"
-                  (click)="care.toggleMedicationTaken(med.id)"
-                  [class]="med.takenToday
-                    ? 'w-full text-left p-3 bg-emerald-50/50 hover:bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center justify-between gap-3 transition'
-                    : 'w-full text-left p-3 bg-august-ivory hover:bg-white rounded-2xl border border-august-border flex items-center justify-between gap-3 transition'"
-                >
-                  <div class="flex items-center gap-3 min-w-0">
-                    <span
-                      [class]="med.takenToday
-                        ? 'w-6 h-6 rounded-lg bg-august-forest text-white flex items-center justify-center shrink-0 text-xs font-bold'
-                        : 'w-6 h-6 rounded-lg bg-white border-2 border-august-border text-transparent flex items-center justify-center shrink-0 text-xs font-bold'"
-                    >
-                      ✓
-                    </span>
-                    <div class="min-w-0">
-                      <div class="flex items-center gap-1.5 flex-wrap">
-                        <span [class]="med.takenToday ? 'font-bold text-august-dark text-xs line-through opacity-80' : 'font-bold text-august-dark text-xs'">
-                          {{ med.name }}
-                        </span>
-                        <span
-                          [class]="med.isDiuretic
-                            ? 'px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[9px] font-bold uppercase'
-                            : 'px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[9px] font-semibold uppercase'"
-                        >
-                          {{ med.isDiuretic ? 'Diuretic' : 'Daily Med' }}
-                        </span>
-                      </div>
-                      <div class="text-[11px] text-august-warmGray truncate">
-                        {{ med.dose }} • {{ med.frequency }}
-                        @if (med.takenToday && med.takenAt) {
-                          • <span class="text-emerald-700 font-semibold">Taken {{ med.takenAt }}</span>
-                        }
-                      </div>
-                    </div>
-                  </div>
-                  <span
-                    [class]="med.takenToday
-                      ? 'px-2.5 py-1 rounded-full text-[10px] font-bold bg-august-sage text-august-forest shrink-0'
-                      : 'px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-august-border text-august-warmGray shrink-0'"
-                  >
-                    {{ med.takenToday ? 'Taken' : 'Mark' }}
-                  </span>
-                </button>
-              } @empty {
-                <div class="text-xs text-august-warmGray py-2">No medications listed. Add medications in Profile.</div>
-              }
             </div>
           </div>
         </div>
@@ -768,6 +671,139 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
       </div>
     </div>
 
+    <!-- Daily Medication Checklist Popup Modal -->
+    @if (isMedChecklistOpen()) {
+      <div
+        class="fixed inset-0 bg-august-dark/55 backdrop-blur-sm z-40 flex items-center justify-center p-4"
+        (click)="isMedChecklistOpen.set(false)"
+      >
+        <div
+          class="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-7 max-w-lg w-full shadow-2xl border border-august-border space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto"
+          (click)="$event.stopPropagation()"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-august-sage text-august-forest flex items-center justify-center shrink-0">
+                <app-icon name="pillDiuretic" iconClass="w-5 h-5 text-august-forest" />
+              </div>
+              <div>
+                <h3 class="font-bold text-august-dark text-lg">Daily Medication Checklist</h3>
+                <p class="text-xs text-august-warmGray">
+                  {{ adherence().takenCount }} of {{ adherence().totalCount }} taken today • 7d diuretic rate {{ adherence().sevenDayRatePercent }}%
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              (click)="isMedChecklistOpen.set(false)"
+              aria-label="Close medication checklist"
+              class="w-8 h-8 rounded-full bg-august-ivory hover:bg-slate-200 text-august-dark font-bold text-sm flex items-center justify-center transition shrink-0"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div class="w-full h-2.5 rounded-full bg-august-ivory overflow-hidden border border-august-border/60">
+            <div
+              class="h-full rounded-full transition-all duration-300"
+              [class]="adherence().missedDiureticAlert ? 'bg-rose-600' : 'bg-august-forest'"
+              [style.width.%]="adherence().adherencePercent"
+            ></div>
+          </div>
+
+          <div
+            [class]="adherence().missedDiureticAlert
+              ? 'p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 font-semibold flex items-start gap-2'
+              : adherence().todayDiureticStatus === 'taken'
+                ? 'p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-100 text-xs text-emerald-900 font-medium flex items-start gap-2'
+                : 'p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 font-medium flex items-start gap-2'"
+          >
+            <app-icon [name]="adherence().missedDiureticAlert ? 'alertSiren' : 'checkSeal'" iconClass="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{{ adherence().correlationNote }}</span>
+          </div>
+
+          <div class="space-y-2.5">
+            @for (med of care.patient().medications; track med.id) {
+              <button
+                type="button"
+                (click)="care.toggleMedicationTaken(med.id)"
+                [class]="med.takenToday
+                  ? 'w-full text-left p-3.5 bg-emerald-50/50 hover:bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center justify-between gap-3 transition'
+                  : 'w-full text-left p-3.5 bg-august-ivory hover:bg-white rounded-2xl border border-august-border flex items-center justify-between gap-3 transition'"
+              >
+                <div class="flex items-center gap-3 min-w-0">
+                  <span
+                    [class]="med.takenToday
+                      ? 'w-6 h-6 rounded-lg bg-august-forest text-white flex items-center justify-center shrink-0 text-xs font-bold'
+                      : 'w-6 h-6 rounded-lg bg-white border-2 border-august-border text-transparent flex items-center justify-center shrink-0 text-xs font-bold'"
+                  >
+                    ✓
+                  </span>
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <span [class]="med.takenToday ? 'font-bold text-august-dark text-sm line-through opacity-80' : 'font-bold text-august-dark text-sm'">
+                        {{ med.name }}
+                      </span>
+                      <span
+                        [class]="med.isDiuretic
+                          ? 'px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[9px] font-bold uppercase'
+                          : 'px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[9px] font-semibold uppercase'"
+                      >
+                        {{ med.isDiuretic ? 'Diuretic' : 'Daily Med' }}
+                      </span>
+                    </div>
+                    <div class="text-xs text-august-warmGray truncate">
+                      {{ med.dose }} • {{ med.frequency }}
+                      @if (med.takenToday && med.takenAt) {
+                        • <span class="text-emerald-700 font-semibold">Taken {{ med.takenAt }}</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+                <span
+                  [class]="med.takenToday
+                    ? 'px-3 py-1 rounded-full text-[11px] font-bold bg-august-sage text-august-forest shrink-0'
+                    : 'px-3 py-1 rounded-full text-[11px] font-bold bg-white border border-august-border text-august-warmGray shrink-0'"
+                >
+                  {{ med.takenToday ? 'Taken' : 'Mark' }}
+                </span>
+              </button>
+            } @empty {
+              <div class="text-xs text-august-warmGray py-2">No medications listed. Add medications in Profile.</div>
+            }
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-august-border">
+            <a
+              routerLink="/profile"
+              (click)="isMedChecklistOpen.set(false)"
+              class="text-xs font-bold text-august-forest hover:underline"
+            >
+              Edit Medications in Profile →
+            </a>
+            <div class="flex items-center gap-2">
+              @if (adherence().takenCount < adherence().totalCount) {
+                <button
+                  type="button"
+                  (click)="care.markAllMedicationsTaken()"
+                  class="px-3.5 py-2 rounded-xl bg-august-forest hover:bg-august-forestHover text-white text-xs font-bold transition"
+                >
+                  Take All Remaining
+                </button>
+              }
+              <button
+                type="button"
+                (click)="isMedChecklistOpen.set(false)"
+                class="px-3.5 py-2 rounded-xl bg-august-ivory hover:bg-slate-200 border border-august-border text-xs font-bold text-august-dark transition"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
     <!-- Concerning Weight Alarm Modal -->
     @if (care.symptomGateCompleted() && metrics().isConcerning && !care.alertAcknowledged()) {
       <div class="fixed inset-0 bg-rose-950/65 backdrop-blur-sm z-40 flex items-center justify-center p-4">
@@ -814,6 +850,7 @@ export class HomeDashboardComponent {
   readonly adherence = this.care.adherenceSummary;
 
   readonly selectedCheckInId = signal<number>(7);
+  readonly isMedChecklistOpen = signal<boolean>(false);
 
   readonly maxDeltaFormatted = computed(() =>
     this.formatUnitDelta(Math.max(this.metrics().overnightDelta, this.metrics().baselineDelta))
@@ -866,12 +903,6 @@ export class HomeDashboardComponent {
     if (diffDays === 1) return 'Tomorrow';
     return `In ${diffDays} days`;
   });
-
-  scrollToChecklist(): void {
-    if (typeof document !== 'undefined') {
-      document.getElementById('daily-meds-checklist')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }
 
   formatUnitDelta(deltaLbs: number): string {
     const val = this.care.convertWeight(deltaLbs);

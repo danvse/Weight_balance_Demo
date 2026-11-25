@@ -144,7 +144,7 @@ import { HospitalBgComponent } from '../hospital-bg/hospital-bg.component';
                       <div class="w-9 h-9 rounded-xl bg-august-forest text-white flex items-center justify-center font-bold text-xs shrink-0">RD</div>
                       <div>
                         <span class="font-bold text-august-dark block">Robert Davis (Patient)</span>
-                        <span class="text-[10px] text-red-700 font-semibold">Demo: &gt;2 lbs Alert + Symptoms</span>
+                        <span class="text-[10px] text-august-warmGray font-medium">Demo: Patient Portal</span>
                       </div>
                     </button>
                     <button

@@ -18,15 +18,15 @@ describe('August Care Angular RPM App', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('should evaluate >2 lbs fluid gain as concerning and trigger red dashboard state', () => {
+  it('should default to normal weight and trigger red dashboard state on >2 lbs fluid gain', () => {
     const care = TestBed.inject(CareStateService);
     care.login('patient');
-    expect(care.clinicalMetrics().isConcerning).toBe(true);
-    expect(care.isRedDashboardActive()).toBe(true);
-
-    care.toggleAlertSimulation();
     expect(care.clinicalMetrics().isConcerning).toBe(false);
     expect(care.isRedDashboardActive()).toBe(false);
+
+    care.toggleAlertSimulation();
+    expect(care.clinicalMetrics().isConcerning).toBe(true);
+    expect(care.isRedDashboardActive()).toBe(true);
   });
 
   it('should complete symptom gate before allowing dashboard access', () => {

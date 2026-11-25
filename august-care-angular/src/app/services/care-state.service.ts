@@ -15,7 +15,7 @@ import {
   WeightEntry
 } from '../models/care.models';
 
-const STORAGE_KEY = 'august_care_angular_rpm_v2';
+const STORAGE_KEY = 'august_care_angular_rpm_v3';
 
 interface PersistedState {
   isAuthenticated: boolean;
@@ -72,7 +72,7 @@ const DEFAULT_PERSISTED: PersistedState = {
     acknowledged: false
   },
   weightHistory: [
-    { id: 7, dateLabel: 'Today', fullDate: 'Nov 24', weight: 174.6, syncTime: '6:15 AM' },
+    { id: 7, dateLabel: 'Today', fullDate: 'Nov 24', weight: 172.1, syncTime: '6:15 AM' },
     {
       id: 6,
       dateLabel: 'Yesterday',
@@ -128,7 +128,7 @@ const DEFAULT_PERSISTED: PersistedState = {
     { label: 'Nov 2', weight: 172.5 },
     { label: 'Nov 9', weight: 172.1 },
     { label: 'Nov 16', weight: 171.9 },
-    { label: 'This Wk', weight: 174.6 }
+    { label: 'This Wk', weight: 172.1 }
   ],
   monthlyHistory: [
     { label: 'Jun', weight: 171.5 },
@@ -136,35 +136,23 @@ const DEFAULT_PERSISTED: PersistedState = {
     { label: 'Aug', weight: 171.8 },
     { label: 'Sep', weight: 172.2 },
     { label: 'Oct', weight: 172.0 },
-    { label: 'Nov', weight: 174.6 }
+    { label: 'Nov', weight: 172.1 }
   ],
   chatMessages: [
     {
-      id: 'sys-1',
-      sender: 'system',
-      text: 'Mattress Scale recorded a morning weight of 174.6 lbs (+2.6 lbs overnight vs. 172.0 lb baseline).',
-      time: '6:15 AM'
-    },
-    {
       id: 'doc-1',
       sender: 'prescriber',
-      text: 'Good morning Robert. I saw the mattress scale alert showing a 2.6 lb overnight gain. How is your breathing when walking around the house?',
+      text: 'Good morning Robert! Your nocturnal mattress scale readings have stayed steady right around your 172.0 lb dry baseline. Keep logging your morning check-ins and message me anytime.',
       time: '8:10 AM'
     },
     {
       id: 'pat-1',
       sender: 'patient',
-      text: 'Good morning Dr. Miller. I felt slightly winded climbing the stairs and noticed my socks felt tight around my ankles.',
+      text: 'Thanks Dr. Miller! Sleeping well and taking my morning medications as scheduled.',
       time: '8:22 AM'
-    },
-    {
-      id: 'doc-2',
-      sender: 'prescriber',
-      text: 'Thank you for letting me know. Let’s follow your diuretic step-up plan: take an extra 20 mg of Furosemide with breakfast, limit fluids to 1.5 liters today, and we will watch tomorrow morning’s mattress scale reading.',
-      time: '8:26 AM'
     }
   ],
-  unreadChatCount: 1
+  unreadChatCount: 0
 };
 
 @Injectable({ providedIn: 'root' })
@@ -463,11 +451,21 @@ export class CareStateService {
       const normalWeight = Number((this.patient().baselineWeight + 0.1).toFixed(1));
       this.updateLatestWeight(normalWeight);
       this.alertAcknowledged.set(false);
+      this.chatMessages.update(list => list.filter(m => m.id !== 'sys-weight-spike'));
       this.showToast(`Simulated normal morning reading: ${normalWeight} lbs`, 'success');
     } else {
       const spikeWeight = Number((Math.max(prevWeight, this.patient().baselineWeight) + 2.6).toFixed(1));
       this.updateLatestWeight(spikeWeight);
       this.alertAcknowledged.set(false);
+      this.chatMessages.update(list => [
+        ...list.filter(m => m.id !== 'sys-weight-spike'),
+        {
+          id: 'sys-weight-spike',
+          sender: 'system',
+          text: `Mattress Scale recorded a concerning weight of ${spikeWeight.toFixed(1)} lbs (+2.6 lbs > 2.0 lb safety limit).`,
+          time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+        }
+      ]);
       this.playAlarmChime();
       this.showToast(`Alert triggered: Weight spiked to ${spikeWeight} lbs (>2 lbs)`, 'alert');
     }

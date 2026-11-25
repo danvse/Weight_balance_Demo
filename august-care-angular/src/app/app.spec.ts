@@ -45,6 +45,9 @@ describe('August Care Angular RPM App', () => {
 
     expect(care.symptomGateCompleted()).toBe(true);
     expect(care.symptomSummary()).toContain('Feet & Ankles');
+    expect(care.weightHistory()[0].symptoms?.swellingLocations).toContain('Feet & Ankles');
+    expect(care.todaySymptomSeverity()).toBe('severe');
+    expect(care.chatMessages().some(m => m.id === 'sys-symptom-today')).toBe(true);
   });
 
   it('should support signing up with first/last name as patient or prescriber', () => {

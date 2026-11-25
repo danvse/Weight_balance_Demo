@@ -70,6 +70,14 @@ interface PlottedNode extends ChartSeriesPoint {
               <div class="text-slate-300 text-[10px]">
                 Step Change: <b>{{ care.formatDelta(tip.deltaPrev) }}</b> • {{ tip.syncTime }}
               </div>
+              @if (tip.symptomSummary) {
+                <div
+                  class="mt-1 pt-1 border-t border-white/15 text-[10px]"
+                  [class]="tip.symptomSeverity === 'severe' ? 'text-red-300 font-semibold' : tip.symptomSeverity === 'mild' ? 'text-amber-300 font-semibold' : 'text-emerald-300'"
+                >
+                  Check-in: {{ tip.symptomSummary }}
+                </div>
+              }
             </div>
           }
 
@@ -200,7 +208,9 @@ export class WeightTrendChartComponent {
             val: item.weight,
             deltaPrev: Number((item.weight - prev).toFixed(1)),
             deltaBase: Number((item.weight - baseline).toFixed(1)),
-            syncTime: item.syncTime
+            syncTime: item.syncTime,
+            symptomSummary: this.care.formatSymptomChips(item.symptoms).join(' • '),
+            symptomSeverity: this.care.getSymptomSeverity(item.symptoms)
           };
         });
     }

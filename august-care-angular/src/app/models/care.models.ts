@@ -1,6 +1,7 @@
 export type UserRole = 'patient' | 'prescriber';
 export type TimeRange = 'days' | 'weeks' | 'months';
 export type BreathStatus = 'none' | 'mild' | 'rest';
+export type SymptomSeverity = 'clear' | 'mild' | 'severe';
 
 export interface MedicationItem {
   id: number;
@@ -39,6 +40,7 @@ export interface WeightEntry {
   fullDate: string;
   weight: number;
   syncTime: string;
+  symptoms?: SymptomCheck;
 }
 
 export interface PeriodPoint {
@@ -52,6 +54,8 @@ export interface ChartSeriesPoint {
   deltaPrev: number;
   deltaBase: number;
   syncTime: string;
+  symptomSummary?: string;
+  symptomSeverity?: SymptomSeverity;
 }
 
 export interface PrescriberUpdate {

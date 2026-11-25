@@ -8,13 +8,14 @@ import {
   PeriodPoint,
   PrescriberUpdate,
   SymptomCheck,
+  SymptomSeverity,
   TimeRange,
   ToastItem,
   UserRole,
   WeightEntry
 } from '../models/care.models';
 
-const STORAGE_KEY = 'august_care_angular_rpm_v1';
+const STORAGE_KEY = 'august_care_angular_rpm_v2';
 
 interface PersistedState {
   isAuthenticated: boolean;
@@ -72,12 +73,54 @@ const DEFAULT_PERSISTED: PersistedState = {
   },
   weightHistory: [
     { id: 7, dateLabel: 'Today', fullDate: 'Nov 24', weight: 174.6, syncTime: '6:15 AM' },
-    { id: 6, dateLabel: 'Yesterday', fullDate: 'Nov 23', weight: 172.0, syncTime: '6:08 AM' },
-    { id: 5, dateLabel: 'Nov 22', fullDate: 'Nov 22', weight: 172.2, syncTime: '6:22 AM' },
-    { id: 4, dateLabel: 'Nov 21', fullDate: 'Nov 21', weight: 171.8, syncTime: '6:11 AM' },
-    { id: 3, dateLabel: 'Nov 20', fullDate: 'Nov 20', weight: 172.1, syncTime: '6:19 AM' },
-    { id: 2, dateLabel: 'Nov 19', fullDate: 'Nov 19', weight: 171.9, syncTime: '6:05 AM' },
-    { id: 1, dateLabel: 'Nov 18', fullDate: 'Nov 18', weight: 172.0, syncTime: '6:14 AM' }
+    {
+      id: 6,
+      dateLabel: 'Yesterday',
+      fullDate: 'Nov 23',
+      weight: 172.0,
+      syncTime: '6:08 AM',
+      symptoms: { shortnessOfBreath: 'none', poorAppetite: false, hasSwelling: false, swellingLocations: [], swellingOther: '', submittedAt: '6:14 AM' }
+    },
+    {
+      id: 5,
+      dateLabel: 'Nov 22',
+      fullDate: 'Nov 22',
+      weight: 172.2,
+      syncTime: '6:22 AM',
+      symptoms: { shortnessOfBreath: 'none', poorAppetite: true, hasSwelling: false, swellingLocations: [], swellingOther: '', submittedAt: '6:30 AM' }
+    },
+    {
+      id: 4,
+      dateLabel: 'Nov 21',
+      fullDate: 'Nov 21',
+      weight: 171.8,
+      syncTime: '6:11 AM',
+      symptoms: { shortnessOfBreath: 'none', poorAppetite: false, hasSwelling: false, swellingLocations: [], swellingOther: '', submittedAt: '6:20 AM' }
+    },
+    {
+      id: 3,
+      dateLabel: 'Nov 20',
+      fullDate: 'Nov 20',
+      weight: 172.1,
+      syncTime: '6:19 AM',
+      symptoms: { shortnessOfBreath: 'none', poorAppetite: false, hasSwelling: false, swellingLocations: [], swellingOther: '', submittedAt: '6:25 AM' }
+    },
+    {
+      id: 2,
+      dateLabel: 'Nov 19',
+      fullDate: 'Nov 19',
+      weight: 171.9,
+      syncTime: '6:05 AM',
+      symptoms: { shortnessOfBreath: 'none', poorAppetite: false, hasSwelling: false, swellingLocations: [], swellingOther: '', submittedAt: '6:12 AM' }
+    },
+    {
+      id: 1,
+      dateLabel: 'Nov 18',
+      fullDate: 'Nov 18',
+      weight: 172.0,
+      syncTime: '6:14 AM',
+      symptoms: { shortnessOfBreath: 'none', poorAppetite: false, hasSwelling: false, swellingLocations: [], swellingOther: '', submittedAt: '6:19 AM' }
+    }
   ],
   weeklyHistory: [
     { label: 'Oct 19', weight: 172.8 },
@@ -205,6 +248,14 @@ export class CareStateService {
     return `In ${Math.abs(diffDays)} days`;
   });
 
+  readonly todaySymptomSeverity = computed<SymptomSeverity>(() =>
+    this.getSymptomSeverity(this.todaySymptoms())
+  );
+
+  readonly checkInCountLast7Days = computed<number>(() =>
+    this.weightHistory().filter(entry => Boolean(entry.symptoms?.submittedAt)).length
+  );
+
   readonly isRedDashboardActive = computed(
     () => this.isAuthenticated() && this.userRole() === 'patient' && this.clinicalMetrics().isConcerning
   );
@@ -329,15 +380,75 @@ export class CareStateService {
   }
 
   submitSymptoms(symptoms: SymptomCheck): void {
-    this.todaySymptoms.set({
-      ...symptoms,
-      submittedAt: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-    });
+    const timeStr = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const submitted: SymptomCheck = { ...symptoms, submittedAt: timeStr };
+
+    this.todaySymptoms.set(submitted);
+    this.weightHistory.update(rows =>
+      rows.map((r, i) => (i === 0 ? { ...r, symptoms: submitted } : r))
+    );
     this.symptomGateCompleted.set(true);
-    if (this.clinicalMetrics().isConcerning && !this.alertAcknowledged()) {
+
+    const severity = this.getSymptomSeverity(submitted);
+    const chips = this.formatSymptomChips(submitted);
+
+    // Automatically log mild or severe morning symptoms to Prescriber Chat
+    if (severity !== 'clear') {
+      const metrics = this.clinicalMetrics();
+      const cardText = `Morning Health Check (${timeStr}): ${chips.join(', ')} • Mattress weight ${metrics.latestWeight.toFixed(1)} lbs (${this.formatDelta(metrics.baselineDelta)} vs baseline).`;
+      this.chatMessages.update(list => {
+        const filtered = list.filter(m => m.id !== 'sys-symptom-today');
+        return [
+          ...filtered,
+          { id: 'sys-symptom-today', sender: 'system', text: cardText, time: timeStr }
+        ];
+      });
+      if (severity === 'severe') {
+        this.unreadChatCount.update(c => c + 1);
+      }
+    } else {
+      this.chatMessages.update(list => list.filter(m => m.id !== 'sys-symptom-today'));
+    }
+
+    if ((this.clinicalMetrics().isConcerning && !this.alertAcknowledged()) || submitted.shortnessOfBreath === 'rest') {
       this.playAlarmChime();
     }
-    this.showToast('Morning symptom check logged for your care team.', 'success');
+
+    if (submitted.shortnessOfBreath === 'rest') {
+      this.showToast('Urgent: Breathing trouble at rest logged. Please contact Dr. Miller.', 'alert');
+    } else if (severity !== 'clear') {
+      this.showToast('Morning symptoms logged and shared with Dr. Miller in Chat.', 'info');
+    } else {
+      this.showToast('Morning health check logged — looking good today!', 'success');
+    }
+  }
+
+  getSymptomSeverity(s?: SymptomCheck): SymptomSeverity {
+    if (!s || !s.submittedAt) return 'clear';
+    if (
+      s.shortnessOfBreath === 'rest' ||
+      (s.hasSwelling && s.swellingLocations.length >= 2) ||
+      (s.shortnessOfBreath === 'mild' && s.hasSwelling)
+    ) {
+      return 'severe';
+    }
+    if (s.shortnessOfBreath !== 'none' || s.poorAppetite || s.hasSwelling) {
+      return 'mild';
+    }
+    return 'clear';
+  }
+
+  formatSymptomChips(s?: SymptomCheck): string[] {
+    if (!s || !s.submittedAt) return ['Pending'];
+    const chips: string[] = [];
+    if (s.shortnessOfBreath === 'rest') chips.push('SOB at rest');
+    else if (s.shortnessOfBreath === 'mild') chips.push('SOB w/ activity');
+    if (s.poorAppetite) chips.push('Poor appetite');
+    if (s.hasSwelling) {
+      const locs = [...s.swellingLocations, s.swellingOther].filter(Boolean);
+      chips.push(locs.length ? `Swelling: ${locs.join(', ')}` : 'Swelling');
+    }
+    return chips.length ? chips : ['All clear'];
   }
 
   reopenSymptomGate(): void {

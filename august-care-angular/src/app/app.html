@@ -19,7 +19,7 @@
 } @else {
   @if (!care.isRedDashboardActive()) {
     <app-hospital-bg
-      [videoSrc]="care.userRole() === 'prescriber' ? 'clinic-bg.mp4' : 'hospital-bg.mp4'"
+      [videoSrc]="activeBackgroundVideo()"
       scrimClass="fixed inset-0 bg-[#F8F7F2]/75 pointer-events-none z-0"
     />
   }

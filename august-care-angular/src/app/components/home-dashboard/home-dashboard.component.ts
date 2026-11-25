@@ -184,6 +184,107 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
         </div>
       </div>
 
+      <!-- ============================================== -->
+      <!-- TODAY'S ACTION ROW (Med Reminders + Clinic Visits Above the Fold) -->
+      <!-- ============================================== -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <!-- Quick Medication Dose Bar (7 cols) -->
+        <div
+          [class]="adherence().missedDiureticAlert
+            ? 'lg:col-span-7 bg-rose-50/95 backdrop-blur-md rounded-3xl p-4 sm:p-5 border border-rose-200 shadow-sm flex flex-col justify-between gap-3'
+            : 'lg:col-span-7 bg-white/95 backdrop-blur-md rounded-3xl p-4 sm:p-5 border border-august-border shadow-sm flex flex-col justify-between gap-3'"
+        >
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5">
+              <div
+                [class]="adherence().missedDiureticAlert
+                  ? 'w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0'
+                  : 'w-9 h-9 rounded-xl bg-august-sage text-august-forest flex items-center justify-center shrink-0'"
+              >
+                <app-icon name="pillDiuretic" iconClass="w-5 h-5" />
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="text-sm font-bold text-august-dark">Today's Dose Reminders</h3>
+                  <span
+                    [class]="adherence().takenCount === adherence().totalCount
+                      ? 'px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold'
+                      : 'px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold'"
+                  >
+                    {{ adherence().takenCount }}/{{ adherence().totalCount }} Taken
+                  </span>
+                </div>
+                <p class="text-[11px] text-august-warmGray">Tap a medication to check it off right away • 7d diuretics {{ adherence().sevenDayRatePercent }}%</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              @if (adherence().takenCount < adherence().totalCount) {
+                <button
+                  type="button"
+                  (click)="care.markAllMedicationsTaken()"
+                  class="px-3 py-1.5 rounded-xl bg-august-forest hover:bg-august-forestHover text-white text-[11px] font-bold transition"
+                >
+                  Take All Remaining
+                </button>
+              }
+              <button
+                type="button"
+                (click)="scrollToChecklist()"
+                class="px-2.5 py-1.5 rounded-xl bg-august-ivory hover:bg-august-sage border border-august-border text-[11px] font-bold text-august-forest transition"
+              >
+                Full Details
+              </button>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-2">
+            @for (med of care.patient().medications; track med.id) {
+              <button
+                type="button"
+                (click)="care.toggleMedicationTaken(med.id)"
+                [class]="med.takenToday
+                  ? 'px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold flex items-center gap-1.5 transition hover:bg-emerald-100/70'
+                  : 'px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs font-bold flex items-center gap-1.5 transition hover:bg-amber-100 shadow-xs'"
+              >
+                <span>{{ med.takenToday ? '✓' : '○' }}</span>
+                <span>{{ med.name }}</span>
+                <span class="text-[10px] opacity-75">{{ med.dose }}</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Upcoming & Last Prescriber Visit Timeline (5 cols) -->
+        <div class="lg:col-span-5 bg-white/95 backdrop-blur-md rounded-3xl p-4 sm:p-5 border border-august-border shadow-sm flex flex-col justify-between gap-3">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center shrink-0">
+                <app-icon name="calendarVisit" iconClass="w-5 h-5" />
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-august-dark">Prescriber Visits</h3>
+                <p class="text-[11px] text-august-warmGray">Clinical checkup reminders</p>
+              </div>
+            </div>
+            <a routerLink="/profile" class="text-xs text-august-forest font-bold hover:underline">Update Date</a>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div class="p-3 rounded-2xl bg-purple-50/70 border border-purple-100 space-y-0.5">
+              <span class="text-[10px] text-purple-800 uppercase tracking-wider font-bold block">Next Visit</span>
+              <div class="font-serif font-bold text-august-dark text-sm sm:text-base">{{ care.formatFriendlyDate(care.patient().nextVisitDate) }}</div>
+              <span class="text-[11px] text-purple-800 font-semibold block">{{ daysUntilNextVisit() }} • Follow-up</span>
+            </div>
+            <div class="p-3 rounded-2xl bg-august-ivory border border-august-border space-y-0.5">
+              <span class="text-[10px] text-august-warmGray uppercase tracking-wider font-bold block">Last Visit</span>
+              <div class="font-serif font-bold text-august-dark text-sm sm:text-base">{{ care.formatFriendlyDate(care.patient().lastVisitDate) }}</div>
+              <span class="text-[11px] text-emerald-700 font-semibold block">{{ care.daysSinceLastVisit() }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Two-Column Dashboard Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <!-- Left Column (7 cols): Weight Trend Chart, Trends Strip, & Block 1 (Weight Table) -->
@@ -332,6 +433,103 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
                   }
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          <!-- Interactive Daily Medication & Diuretic Checklist (Moved to Left Column for Balance) -->
+          <div id="daily-meds-checklist" class="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-3.5">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-august-sage text-august-forest flex items-center justify-center shrink-0">
+                  <app-icon name="pillDiuretic" iconClass="w-5 h-5 text-august-forest" />
+                </div>
+                <div>
+                  <h3 class="font-bold text-august-dark text-base">Daily Medication Checklist</h3>
+                  <p class="text-xs text-august-warmGray">
+                    {{ adherence().takenCount }} of {{ adherence().totalCount }} taken today • 7d diuretic rate {{ adherence().sevenDayRatePercent }}%
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  (click)="care.markAllMedicationsTaken()"
+                  class="px-3 py-1.5 rounded-xl bg-august-ivory hover:bg-august-sage border border-august-border text-xs font-bold text-august-forest transition"
+                >
+                  Take All
+                </button>
+                <a routerLink="/profile" class="text-xs text-august-forest font-bold hover:underline">Edit Meds</a>
+              </div>
+            </div>
+
+            <div class="w-full h-2 rounded-full bg-august-ivory overflow-hidden border border-august-border/60">
+              <div
+                class="h-full rounded-full transition-all duration-300"
+                [class]="adherence().missedDiureticAlert ? 'bg-rose-600' : 'bg-august-forest'"
+                [style.width.%]="adherence().adherencePercent"
+              ></div>
+            </div>
+
+            <div
+              [class]="adherence().missedDiureticAlert
+                ? 'p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 font-semibold flex items-start gap-2'
+                : adherence().todayDiureticStatus === 'taken'
+                  ? 'p-3 rounded-2xl bg-emerald-50/80 border border-emerald-100 text-xs text-emerald-900 font-medium flex items-start gap-2'
+                  : 'p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 font-medium flex items-start gap-2'"
+            >
+              <app-icon [name]="adherence().missedDiureticAlert ? 'alertSiren' : 'checkSeal'" iconClass="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{{ adherence().correlationNote }}</span>
+            </div>
+
+            <div class="space-y-2">
+              @for (med of care.patient().medications; track med.id) {
+                <button
+                  type="button"
+                  (click)="care.toggleMedicationTaken(med.id)"
+                  [class]="med.takenToday
+                    ? 'w-full text-left p-3 bg-emerald-50/50 hover:bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center justify-between gap-3 transition'
+                    : 'w-full text-left p-3 bg-august-ivory hover:bg-white rounded-2xl border border-august-border flex items-center justify-between gap-3 transition'"
+                >
+                  <div class="flex items-center gap-3 min-w-0">
+                    <span
+                      [class]="med.takenToday
+                        ? 'w-6 h-6 rounded-lg bg-august-forest text-white flex items-center justify-center shrink-0 text-xs font-bold'
+                        : 'w-6 h-6 rounded-lg bg-white border-2 border-august-border text-transparent flex items-center justify-center shrink-0 text-xs font-bold'"
+                    >
+                      ✓
+                    </span>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <span [class]="med.takenToday ? 'font-bold text-august-dark text-xs line-through opacity-80' : 'font-bold text-august-dark text-xs'">
+                          {{ med.name }}
+                        </span>
+                        <span
+                          [class]="med.isDiuretic
+                            ? 'px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[9px] font-bold uppercase'
+                            : 'px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[9px] font-semibold uppercase'"
+                        >
+                          {{ med.isDiuretic ? 'Diuretic' : 'Daily Med' }}
+                        </span>
+                      </div>
+                      <div class="text-[11px] text-august-warmGray truncate">
+                        {{ med.dose }} • {{ med.frequency }}
+                        @if (med.takenToday && med.takenAt) {
+                          • <span class="text-emerald-700 font-semibold">Taken {{ med.takenAt }}</span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                  <span
+                    [class]="med.takenToday
+                      ? 'px-2.5 py-1 rounded-full text-[10px] font-bold bg-august-sage text-august-forest shrink-0'
+                      : 'px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-august-border text-august-warmGray shrink-0'"
+                  >
+                    {{ med.takenToday ? 'Taken' : 'Mark' }}
+                  </span>
+                </button>
+              } @empty {
+                <div class="text-xs text-august-warmGray py-2">No medications listed. Add medications in Profile.</div>
+              }
             </div>
           </div>
         </div>
@@ -566,135 +764,6 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
               </div>
             </div>
           </div>
-
-          <!-- BLOCK 3: Last Visit to Prescriber -->
-          <div class="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-4">
-            <div class="flex items-center justify-between pb-2.5 border-b border-august-border">
-              <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center">
-                  <app-icon name="calendarVisit" iconClass="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 class="text-base font-bold text-august-dark">Last Visit to Prescriber</h3>
-                  <p class="text-xs text-august-warmGray">Clinical checkup timeline</p>
-                </div>
-              </div>
-              <a routerLink="/profile" class="text-xs text-august-forest font-bold hover:underline">Update Date</a>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-              <div class="p-4 rounded-2xl bg-august-ivory border border-august-border space-y-1">
-                <span class="text-[10px] text-august-warmGray uppercase tracking-wider font-bold">Last Visit Date</span>
-                <div class="font-serif font-bold text-august-dark text-lg">{{ care.formatFriendlyDate(care.patient().lastVisitDate) }}</div>
-                <span class="text-xs text-emerald-700 font-semibold block">{{ care.daysSinceLastVisit() }}</span>
-              </div>
-              <div class="p-4 rounded-2xl bg-august-ivory border border-august-border space-y-1">
-                <span class="text-[10px] text-august-warmGray uppercase tracking-wider font-bold">Next Visit</span>
-                <div class="font-serif font-bold text-august-dark text-lg">{{ care.formatFriendlyDate(care.patient().nextVisitDate) }}</div>
-                <span class="text-xs text-august-forest font-semibold block">Cardiology Follow-up</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Interactive Daily Medication & Diuretic Checklist -->
-          <div class="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-3.5">
-            <div class="flex items-center justify-between gap-2">
-              <div class="flex items-center gap-2.5">
-                <div class="w-9 h-9 rounded-xl bg-august-sage text-august-forest flex items-center justify-center shrink-0">
-                  <app-icon name="pillDiuretic" iconClass="w-5 h-5 text-august-forest" />
-                </div>
-                <div>
-                  <h3 class="font-bold text-august-dark text-sm">Daily Medication Checklist</h3>
-                  <p class="text-[11px] text-august-warmGray">
-                    {{ adherence().takenCount }} of {{ adherence().totalCount }} taken today • 7d diuretic rate {{ adherence().sevenDayRatePercent }}%
-                  </p>
-                </div>
-              </div>
-              <div class="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  (click)="care.markAllMedicationsTaken()"
-                  class="px-2.5 py-1 rounded-xl bg-august-ivory hover:bg-august-sage border border-august-border text-[11px] font-bold text-august-forest transition"
-                >
-                  Take All
-                </button>
-                <a routerLink="/profile" class="text-xs text-august-forest font-bold hover:underline">Edit</a>
-              </div>
-            </div>
-
-            <!-- Adherence Progress Bar -->
-            <div class="w-full h-2 rounded-full bg-august-ivory overflow-hidden border border-august-border/60">
-              <div
-                class="h-full rounded-full transition-all duration-300"
-                [class]="adherence().missedDiureticAlert ? 'bg-rose-600' : 'bg-august-forest'"
-                [style.width.%]="adherence().adherencePercent"
-              ></div>
-            </div>
-
-            <!-- Clinical Correlation Note -->
-            <div
-              [class]="adherence().missedDiureticAlert
-                ? 'p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 font-semibold flex items-start gap-2'
-                : adherence().todayDiureticStatus === 'taken'
-                  ? 'p-3 rounded-2xl bg-emerald-50/80 border border-emerald-100 text-xs text-emerald-900 font-medium flex items-start gap-2'
-                  : 'p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 font-medium flex items-start gap-2'"
-            >
-              <app-icon [name]="adherence().missedDiureticAlert ? 'alertSiren' : 'checkSeal'" iconClass="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{{ adherence().correlationNote }}</span>
-            </div>
-
-            <!-- Interactive Checklist Rows -->
-            <div class="space-y-2">
-              @for (med of care.patient().medications; track med.id) {
-                <button
-                  type="button"
-                  (click)="care.toggleMedicationTaken(med.id)"
-                  [class]="med.takenToday
-                    ? 'w-full text-left p-3 bg-emerald-50/50 hover:bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center justify-between gap-3 transition'
-                    : 'w-full text-left p-3 bg-august-ivory hover:bg-white rounded-2xl border border-august-border flex items-center justify-between gap-3 transition'"
-                >
-                  <div class="flex items-center gap-3 min-w-0">
-                    <span
-                      [class]="med.takenToday
-                        ? 'w-6 h-6 rounded-lg bg-august-forest text-white flex items-center justify-center shrink-0 text-xs font-bold'
-                        : 'w-6 h-6 rounded-lg bg-white border-2 border-august-border text-transparent flex items-center justify-center shrink-0 text-xs font-bold'"
-                    >
-                      ✓
-                    </span>
-                    <div class="min-w-0">
-                      <div class="flex items-center gap-1.5 flex-wrap">
-                        <span [class]="med.takenToday ? 'font-bold text-august-dark text-xs line-through opacity-80' : 'font-bold text-august-dark text-xs'">
-                          {{ med.name }}
-                        </span>
-                        <span
-                          [class]="med.isDiuretic
-                            ? 'px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[9px] font-bold uppercase'
-                            : 'px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[9px] font-semibold uppercase'"
-                        >
-                          {{ med.isDiuretic ? 'Diuretic' : 'Daily Med' }}
-                        </span>
-                      </div>
-                      <div class="text-[11px] text-august-warmGray truncate">
-                        {{ med.dose }} • {{ med.frequency }}
-                        @if (med.takenToday && med.takenAt) {
-                          • <span class="text-emerald-700 font-semibold">Taken {{ med.takenAt }}</span>
-                        }
-                      </div>
-                    </div>
-                  </div>
-                  <span
-                    [class]="med.takenToday
-                      ? 'px-2.5 py-1 rounded-full text-[10px] font-bold bg-august-sage text-august-forest shrink-0'
-                      : 'px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-august-border text-august-warmGray shrink-0'"
-                  >
-                    {{ med.takenToday ? 'Taken' : 'Mark' }}
-                  </span>
-                </button>
-              } @empty {
-                <div class="text-xs text-august-warmGray py-2">No medications listed. Add medications in Profile.</div>
-              }
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -786,6 +855,23 @@ export class HomeDashboardComponent {
     const days = this.sevenDayCheckIns();
     return days.find(d => d.id === this.selectedCheckInId()) ?? days[days.length - 1];
   });
+
+  readonly daysUntilNextVisit = computed(() => {
+    const dateStr = this.care.patient().nextVisitDate;
+    if (!dateStr) return 'Scheduled';
+    const next = new Date(`${dateStr}T00:00:00`);
+    const refToday = new Date('2026-11-24T00:00:00');
+    const diffDays = Math.round((next.getTime() - refToday.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays <= 0) return 'Today';
+    if (diffDays === 1) return 'Tomorrow';
+    return `In ${diffDays} days`;
+  });
+
+  scrollToChecklist(): void {
+    if (typeof document !== 'undefined') {
+      document.getElementById('daily-meds-checklist')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
 
   formatUnitDelta(deltaLbs: number): string {
     const val = this.care.convertWeight(deltaLbs);

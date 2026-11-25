@@ -49,7 +49,7 @@ import { CustomIconComponent } from '../custom-icon/custom-icon.component';
                 <th class="py-3 px-3">Mattress Weight</th>
                 <th class="py-3 px-3">Overnight Change</th>
                 <th class="py-3 px-3">Today's Symptoms</th>
-                <th class="py-3 px-3">Primary Diuretic</th>
+                <th class="py-3 px-3">Primary Diuretic &amp; Adherence</th>
                 <th class="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -72,7 +72,18 @@ import { CustomIconComponent } from '../custom-icon/custom-icon.component';
                 <td [class]="hasSymFlag() ? 'py-3.5 px-3 text-red-700 font-semibold' : 'py-3.5 px-3 text-august-warmGray'">
                   {{ care.symptomSummary() }}
                 </td>
-                <td class="py-3.5 px-3">{{ primaryDiuretic() }}</td>
+                <td class="py-3.5 px-3">
+                  <div class="font-bold text-august-dark">{{ primaryDiuretic() }}</div>
+                  <span
+                    [class]="adherence().missedDiureticAlert
+                      ? 'inline-block mt-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold text-[10px]'
+                      : adherence().todayDiureticStatus === 'taken'
+                        ? 'inline-block mt-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold text-[10px]'
+                        : 'inline-block mt-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold text-[10px]'"
+                  >
+                    {{ adherence().diureticTakenCount }}/{{ adherence().diureticTotalCount }} today • 7d: {{ adherence().sevenDayRatePercent }}%
+                  </span>
+                </td>
                 <td class="py-3.5 px-4 text-right">
                   <div class="flex justify-end gap-2">
                     <button type="button" (click)="inspectPatient('/home')" class="px-3 py-1.5 bg-august-forest text-white rounded-lg font-bold text-xs">Inspect Chart</button>
@@ -93,6 +104,60 @@ import { CustomIconComponent } from '../custom-icon/custom-icon.component';
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- Diuretic Adherence & Weight Correlation Panel -->
+      <div class="bg-white rounded-3xl p-6 border border-august-border shadow-sm space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2.5">
+            <app-icon name="pillDiuretic" iconClass="w-5 h-5 text-august-forest" />
+            <div>
+              <h3 class="text-base font-bold text-august-dark">Medication Dose Checklist &amp; Fluid Correlation ({{ care.patient().name }})</h3>
+              <p class="text-xs text-august-warmGray">Syncs live with patient's home dose check-offs to distinguish non-adherence from worsening retention</p>
+            </div>
+          </div>
+          <span
+            [class]="adherence().missedDiureticAlert
+              ? 'px-3 py-1 rounded-full bg-rose-100 text-rose-700 font-bold text-xs'
+              : 'px-3 py-1 rounded-full bg-august-sage text-august-forest font-bold text-xs'"
+          >
+            {{ adherence().takenCount }} / {{ adherence().totalCount }} doses taken today ({{ adherence().sevenDayRatePercent }}% 7d diuretic rate)
+          </span>
+        </div>
+
+        <div
+          [class]="adherence().missedDiureticAlert
+            ? 'p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 font-semibold flex items-center gap-2'
+            : 'p-3.5 rounded-2xl bg-august-ivory border border-august-border text-xs text-august-dark font-medium flex items-center gap-2'"
+        >
+          <app-icon [name]="adherence().missedDiureticAlert ? 'alertSiren' : 'checkSeal'" iconClass="w-4 h-4 shrink-0" />
+          <span>{{ adherence().correlationNote }}</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          @for (med of care.patient().medications; track med.id) {
+            <div
+              [class]="med.takenToday
+                ? 'p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-1'
+                : 'p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-1'"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <span class="font-bold text-xs text-august-dark">{{ med.name }}</span>
+                <span
+                  [class]="med.takenToday
+                    ? 'px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold'
+                    : 'px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold'"
+                >
+                  {{ med.takenToday ? 'Taken' : 'Pending' }}
+                </span>
+              </div>
+              <div class="text-[11px] text-august-warmGray">{{ med.dose }} • {{ med.isDiuretic ? 'Diuretic' : 'Cardio Med' }}</div>
+              <div class="text-[10px] font-semibold text-august-dark">
+                {{ med.takenToday && med.takenAt ? 'Checked off at ' + med.takenAt : 'Not yet marked today' }}
+              </div>
+            </div>
+          }
         </div>
       </div>
 
@@ -128,6 +193,7 @@ export class PrescriberEhrComponent {
   readonly care = inject(CareStateService);
   private readonly router = inject(Router);
   readonly metrics = this.care.clinicalMetrics;
+  readonly adherence = this.care.adherenceSummary;
 
   noteDraft = '';
 

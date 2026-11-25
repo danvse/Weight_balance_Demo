@@ -78,6 +78,14 @@ interface PlottedNode extends ChartSeriesPoint {
                   Check-in: {{ tip.symptomSummary }}
                 </div>
               }
+              @if (tip.diureticAdherence) {
+                <div
+                  class="text-[10px] mt-0.5 font-semibold"
+                  [class]="tip.diureticAdherence === 'missed' ? 'text-rose-300' : tip.diureticAdherence === 'partial' ? 'text-amber-300' : 'text-indigo-200'"
+                >
+                  Diuretic: {{ tip.diureticAdherence === 'missed' ? 'Missed dose' : tip.diureticAdherence === 'partial' ? 'Partial dose' : 'All doses taken' }}
+                </div>
+              }
             </div>
           }
 
@@ -143,6 +151,27 @@ interface PlottedNode extends ChartSeriesPoint {
                   stroke="#ffffff"
                   stroke-width="2.5"
                 />
+                @if (node.diureticAdherence === 'missed' || node.diureticAdherence === 'partial') {
+                  <circle
+                    [attr.cx]="node.x"
+                    [attr.cy]="node.y"
+                    r="10"
+                    fill="none"
+                    [attr.stroke]="node.diureticAdherence === 'missed' ? '#E11D48' : '#D97706'"
+                    stroke-width="1.8"
+                    stroke-dasharray="3 2"
+                  />
+                  <text
+                    [attr.x]="node.x"
+                    [attr.y]="node.y + 19"
+                    text-anchor="middle"
+                    font-size="8.5"
+                    font-weight="800"
+                    [attr.fill]="node.diureticAdherence === 'missed' ? '#BE123C' : '#B45309'"
+                  >
+                    Rx!
+                  </text>
+                }
                 <text
                   [attr.x]="node.x"
                   [attr.y]="node.y - 12"
@@ -210,7 +239,8 @@ export class WeightTrendChartComponent {
             deltaBase: Number((item.weight - baseline).toFixed(1)),
             syncTime: item.syncTime,
             symptomSummary: this.care.formatSymptomChips(item.symptoms).join(' • '),
-            symptomSeverity: this.care.getSymptomSeverity(item.symptoms)
+            symptomSeverity: this.care.getSymptomSeverity(item.symptoms),
+            diureticAdherence: item.diureticAdherence
           };
         });
     }

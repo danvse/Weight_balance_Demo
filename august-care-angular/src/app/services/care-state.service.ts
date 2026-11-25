@@ -1,10 +1,12 @@
 import { Injectable, computed, effect, signal } from '@angular/core';
 import {
+  AdherenceStatus,
   BmiInfo,
   BreathStatus,
   ChatMessage,
   ClinicalMetrics,
   GoalProgressInfo,
+  MedicationAdherenceSummary,
   MedicationItem,
   PatientProfile,
   PeriodPoint,
@@ -18,7 +20,7 @@ import {
   WeightUnit
 } from '../models/care.models';
 
-const STORAGE_KEY = 'august_care_angular_rpm_v4';
+const STORAGE_KEY = 'august_care_angular_rpm_v5';
 
 interface PersistedState {
   isAuthenticated: boolean;
@@ -61,9 +63,9 @@ const DEFAULT_PERSISTED: PersistedState = {
     prescriberName: 'Dr. Sarah Miller, MD',
     prescriberSpecialty: 'Cardiology Clinic',
     medications: [
-      { id: 1, name: 'Furosemide (Lasix)', dose: '40 mg', frequency: 'Once daily • Morning', isDiuretic: true, takenToday: true },
-      { id: 2, name: 'Spironolactone', dose: '25 mg', frequency: 'Once daily • Morning', isDiuretic: true, takenToday: true },
-      { id: 3, name: 'Carvedilol', dose: '12.5 mg', frequency: 'Twice daily • Morning & Evening', isDiuretic: false, takenToday: false }
+      { id: 1, name: 'Furosemide (Lasix)', dose: '40 mg', frequency: 'Once daily • Morning', isDiuretic: true, takenToday: true, takenAt: '6:35 AM' },
+      { id: 2, name: 'Spironolactone', dose: '25 mg', frequency: 'Once daily • Morning', isDiuretic: true, takenToday: true, takenAt: '6:35 AM' },
+      { id: 3, name: 'Carvedilol', dose: '12.5 mg', frequency: 'Twice daily • Morning & Evening', isDiuretic: false, takenToday: false, takenAt: null }
     ]
   },
   todaySymptoms: {
@@ -83,13 +85,25 @@ const DEFAULT_PERSISTED: PersistedState = {
     acknowledged: false
   },
   weightHistory: [
-    { id: 7, dateLabel: 'Today', fullDate: 'Nov 24', weight: 172.1, syncTime: '6:15 AM' },
+    {
+      id: 7,
+      dateLabel: 'Today',
+      fullDate: 'Nov 24',
+      weight: 172.1,
+      syncTime: '6:15 AM',
+      diureticAdherence: 'taken',
+      medicationsTakenCount: 2,
+      medicationsTotalCount: 3
+    },
     {
       id: 6,
       dateLabel: 'Yesterday',
       fullDate: 'Nov 23',
       weight: 172.0,
       syncTime: '6:08 AM',
+      diureticAdherence: 'taken',
+      medicationsTakenCount: 3,
+      medicationsTotalCount: 3,
       symptoms: { shortnessOfBreath: 'none', poorAppetite: false, hasSwelling: false, swellingLocations: [], swellingOther: '', submittedAt: '6:14 AM' }
     },
     {
@@ -98,6 +112,9 @@ const DEFAULT_PERSISTED: PersistedState = {
       fullDate: 'Nov 22',
       weight: 172.2,
       syncTime: '6:22 AM',
+      diureticAdherence: 'missed',
+      medicationsTakenCount: 1,
+      medicationsTotalCount: 3,
       symptoms: { shortnessOfBreath: 'none', poorAppetite: true, hasSwelling: false, swellingLocations: [], swellingOther: '', submittedAt: '6:30 AM' }
     },
     {
@@ -106,6 +123,9 @@ const DEFAULT_PERSISTED: PersistedState = {
       fullDate: 'Nov 21',
       weight: 171.8,
       syncTime: '6:11 AM',
+      diureticAdherence: 'taken',
+      medicationsTakenCount: 3,
+      medicationsTotalCount: 3,
       symptoms: { shortnessOfBreath: 'none', poorAppetite: false, hasSwelling: false, swellingLocations: [], swellingOther: '', submittedAt: '6:20 AM' }
     },
     {
@@ -114,6 +134,9 @@ const DEFAULT_PERSISTED: PersistedState = {
       fullDate: 'Nov 20',
       weight: 172.1,
       syncTime: '6:19 AM',
+      diureticAdherence: 'taken',
+      medicationsTakenCount: 3,
+      medicationsTotalCount: 3,
       symptoms: { shortnessOfBreath: 'none', poorAppetite: false, hasSwelling: false, swellingLocations: [], swellingOther: '', submittedAt: '6:25 AM' }
     },
     {
@@ -122,6 +145,9 @@ const DEFAULT_PERSISTED: PersistedState = {
       fullDate: 'Nov 19',
       weight: 171.9,
       syncTime: '6:05 AM',
+      diureticAdherence: 'taken',
+      medicationsTakenCount: 3,
+      medicationsTotalCount: 3,
       symptoms: { shortnessOfBreath: 'none', poorAppetite: false, hasSwelling: false, swellingLocations: [], swellingOther: '', submittedAt: '6:12 AM' }
     },
     {
@@ -130,6 +156,9 @@ const DEFAULT_PERSISTED: PersistedState = {
       fullDate: 'Nov 18',
       weight: 172.0,
       syncTime: '6:14 AM',
+      diureticAdherence: 'taken',
+      medicationsTakenCount: 3,
+      medicationsTotalCount: 3,
       symptoms: { shortnessOfBreath: 'none', poorAppetite: false, hasSwelling: false, swellingLocations: [], swellingOther: '', submittedAt: '6:19 AM' }
     }
   ],
@@ -329,6 +358,63 @@ export class CareStateService {
       last30Days: Number((latest - earliest30).toFixed(1)),
       allTime: Number((latest - this.patient().startWeightLbs).toFixed(1)),
       medianWeight: median
+    };
+  });
+
+  readonly adherenceSummary = computed<MedicationAdherenceSummary>(() => {
+    const meds = this.patient().medications;
+    const totalCount = meds.length;
+    const takenCount = meds.filter(m => m.takenToday).length;
+    const adherencePercent = totalCount ? Math.round((takenCount / totalCount) * 100) : 100;
+
+    const diuretics = meds.filter(m => m.isDiuretic);
+    const diureticTotalCount = diuretics.length;
+    const diureticTakenCount = diuretics.filter(m => m.takenToday).length;
+
+    let todayDiureticStatus: MedicationAdherenceSummary['todayDiureticStatus'] = 'none';
+    if (diureticTotalCount > 0) {
+      if (diureticTakenCount === diureticTotalCount) todayDiureticStatus = 'taken';
+      else if (diureticTakenCount > 0) todayDiureticStatus = 'partial';
+      else todayDiureticStatus = 'missed';
+    }
+
+    const history = this.weightHistory();
+    const adMap: Record<AdherenceStatus, number> = { taken: 1, partial: 0.5, missed: 0 };
+    const sevenDayRatePercent = history.length
+      ? Math.round(
+          (history.reduce((sum, entry) => sum + adMap[entry.diureticAdherence ?? 'taken'], 0) / history.length) * 100
+        )
+      : 100;
+
+    const m = this.clinicalMetrics();
+    const maxGain = Math.max(m.overnightDelta, m.baselineDelta);
+    const missedTodayDiuretic = todayDiureticStatus === 'missed' || todayDiureticStatus === 'partial';
+    const missedDiureticAlert = missedTodayDiuretic && (m.isConcerning || maxGain >= 1.0);
+
+    const missedHistoryDay = history.find(
+      (row, idx) => idx > 0 && (row.diureticAdherence === 'missed' || row.diureticAdherence === 'partial')
+    );
+
+    let correlationNote = `All ${diureticTotalCount} diuretic dose(s) taken today — fluid retention risk stays low.`;
+    if (missedDiureticAlert) {
+      const missedCount = diureticTotalCount - diureticTakenCount;
+      correlationNote = `Weight gain (${this.formatDelta(maxGain)}) coincides with ${missedCount} missed diuretic dose(s) today — verify adherence before escalating therapy.`;
+    } else if (missedTodayDiuretic) {
+      correlationNote = `${diureticTotalCount - diureticTakenCount} morning diuretic dose(s) still unchecked — timely dosing helps prevent overnight fluid retention.`;
+    } else if (missedHistoryDay) {
+      correlationNote = `Today's diuretics taken (7-day adherence ${sevenDayRatePercent}%). Minor fluid uptick on ${missedHistoryDay.fullDate} coincided with a missed diuretic dose.`;
+    }
+
+    return {
+      takenCount,
+      totalCount,
+      adherencePercent,
+      diureticTakenCount,
+      diureticTotalCount,
+      todayDiureticStatus,
+      sevenDayRatePercent,
+      missedDiureticAlert,
+      correlationNote
     };
   });
 
@@ -621,27 +707,50 @@ export class CareStateService {
   addMedication(med: Omit<MedicationItem, 'id' | 'takenToday'>): void {
     this.patient.update(p => ({
       ...p,
-      medications: [...p.medications, { ...med, id: Date.now(), takenToday: false }]
+      medications: [...p.medications, { ...med, id: Date.now(), takenToday: false, takenAt: null }]
     }));
+    this.syncTodayAdherenceToHistory();
     this.showToast(`${med.name} added to your medication list.`, 'success');
   }
 
   toggleMedicationTaken(id: number): void {
     let targetName = '';
     let nextState = false;
+    const nowTime = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
     this.patient.update(p => ({
       ...p,
       medications: p.medications.map(m => {
         if (m.id === id) {
           targetName = m.name;
           nextState = !m.takenToday;
-          return { ...m, takenToday: nextState };
+          return { ...m, takenToday: nextState, takenAt: nextState ? nowTime : null };
         }
         return m;
       })
     }));
+    this.syncTodayAdherenceToHistory();
+
     if (targetName) {
-      this.showToast(nextState ? `Marked ${targetName} as taken today.` : `Unmarked ${targetName}.`, 'info');
+      this.showToast(nextState ? `Marked ${targetName} taken at ${nowTime}.` : `Unmarked ${targetName} — adherence synced.`, 'info');
+    }
+  }
+
+  markAllMedicationsTaken(): void {
+    const nowTime = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    let newlyMarked = 0;
+    this.patient.update(p => ({
+      ...p,
+      medications: p.medications.map(m => {
+        if (!m.takenToday) newlyMarked++;
+        return { ...m, takenToday: true, takenAt: m.takenAt || nowTime };
+      })
+    }));
+    this.syncTodayAdherenceToHistory();
+    if (newlyMarked > 0) {
+      this.showToast(`Marked ${newlyMarked} remaining dose(s) taken today.`, 'success');
+    } else {
+      this.showToast('All prescribed medications are already checked off for today.', 'info');
     }
   }
 
@@ -651,7 +760,33 @@ export class CareStateService {
       ...p,
       medications: p.medications.filter(m => m.id !== id)
     }));
+    this.syncTodayAdherenceToHistory();
     if (found) this.showToast(`Removed ${found.name}.`, 'info');
+  }
+
+  private syncTodayAdherenceToHistory(): void {
+    const meds = this.patient().medications;
+    const diuretics = meds.filter(m => m.isDiuretic);
+    const diureticsTaken = diuretics.filter(m => m.takenToday).length;
+    const status: AdherenceStatus =
+      diuretics.length === 0 || diureticsTaken === diuretics.length
+        ? 'taken'
+        : diureticsTaken > 0
+          ? 'partial'
+          : 'missed';
+
+    this.weightHistory.update(rows =>
+      rows.map((r, idx) =>
+        idx === 0
+          ? {
+              ...r,
+              diureticAdherence: status,
+              medicationsTakenCount: meds.filter(m => m.takenToday).length,
+              medicationsTotalCount: meds.length
+            }
+          : r
+      )
+    );
   }
 
   sendPatientChat(text: string): void {
@@ -695,7 +830,8 @@ export class CareStateService {
 
   shareVitalsInChat(): void {
     const m = this.clinicalMetrics();
-    const summary = `📊 Shared Vitals Update: Mattress weight ${m.latestWeight.toFixed(1)} lbs (${this.formatDelta(m.baselineDelta)} vs baseline). Symptoms: ${this.symptomSummary()}.`;
+    const ad = this.adherenceSummary();
+    const summary = `📊 Shared Vitals Update: Mattress weight ${m.latestWeight.toFixed(1)} lbs (${this.formatDelta(m.baselineDelta)} vs baseline) • Meds: ${ad.takenCount}/${ad.totalCount} taken (Diuretics: ${ad.todayDiureticStatus}). Symptoms: ${this.symptomSummary()}.`;
     this.sendPatientChat(summary);
   }
 

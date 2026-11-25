@@ -4,6 +4,8 @@ export type BreathStatus = 'none' | 'mild' | 'rest';
 export type SymptomSeverity = 'clear' | 'mild' | 'severe';
 export type WeightUnit = 'lbs' | 'kg';
 
+export type AdherenceStatus = 'taken' | 'partial' | 'missed';
+
 export interface MedicationItem {
   id: number;
   name: string;
@@ -11,6 +13,19 @@ export interface MedicationItem {
   frequency: string;
   isDiuretic: boolean;
   takenToday: boolean;
+  takenAt?: string | null;
+}
+
+export interface MedicationAdherenceSummary {
+  takenCount: number;
+  totalCount: number;
+  adherencePercent: number;
+  diureticTakenCount: number;
+  diureticTotalCount: number;
+  todayDiureticStatus: AdherenceStatus | 'none';
+  sevenDayRatePercent: number;
+  missedDiureticAlert: boolean;
+  correlationNote: string;
 }
 
 export interface PatientProfile {
@@ -66,6 +81,9 @@ export interface WeightEntry {
   weight: number;
   syncTime: string;
   symptoms?: SymptomCheck;
+  diureticAdherence?: AdherenceStatus;
+  medicationsTakenCount?: number;
+  medicationsTotalCount?: number;
 }
 
 export interface PeriodPoint {
@@ -81,6 +99,7 @@ export interface ChartSeriesPoint {
   syncTime: string;
   symptomSummary?: string;
   symptomSeverity?: SymptomSeverity;
+  diureticAdherence?: AdherenceStatus;
 }
 
 export interface PrescriberUpdate {

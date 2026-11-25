@@ -133,4 +133,33 @@ describe('August Care Angular RPM App', () => {
     care.adjustFluidIntake(8);
     expect(care.patient().fluidIntakeOz).toBe(startFluid + 8);
   });
+
+  it('should sync medication dose checklist and correlate missed diuretics with weight spikes', () => {
+    const care = TestBed.inject(CareStateService);
+
+    const initial = care.adherenceSummary();
+    expect(initial.takenCount).toBe(2);
+    expect(initial.totalCount).toBe(3);
+    expect(initial.todayDiureticStatus).toBe('taken');
+    expect(initial.sevenDayRatePercent).toBe(86);
+    expect(initial.missedDiureticAlert).toBe(false);
+
+    // Unmark Furosemide (diuretic id 1) and simulate >2 lb weight gain
+    care.toggleMedicationTaken(1);
+    care.toggleAlertSimulation();
+
+    const alerted = care.adherenceSummary();
+    expect(alerted.todayDiureticStatus).toBe('partial');
+    expect(alerted.missedDiureticAlert).toBe(true);
+    expect(care.weightHistory()[0].diureticAdherence).toBe('partial');
+    expect(alerted.correlationNote).toContain('missed diuretic dose');
+
+    // Mark all medications taken and verify sync + timestamp
+    care.markAllMedicationsTaken();
+    const resolved = care.adherenceSummary();
+    expect(resolved.takenCount).toBe(3);
+    expect(resolved.todayDiureticStatus).toBe('taken');
+    expect(resolved.missedDiureticAlert).toBe(false);
+    expect(care.patient().medications.every(m => m.takenToday && Boolean(m.takenAt))).toBe(true);
+  });
 });

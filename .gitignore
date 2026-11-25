@@ -1,6 +1,7 @@
 node_modules/
 .angular/
 dist/
+assets/raw-videos/
 *.log
 .DS_Store
 Thumbs.db

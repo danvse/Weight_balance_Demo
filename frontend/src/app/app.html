@@ -1,0 +1,237 @@
+<!-- Toast Notifications -->
+<div class="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-[100] flex flex-col gap-2 pointer-events-none">
+  @for (t of care.toasts(); track t.id) {
+    <div
+      [class]="t.type === 'alert'
+        ? 'toast-enter pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl border shadow-xl text-xs font-semibold max-w-sm bg-red-700 text-white border-red-400'
+        : t.type === 'info'
+          ? 'toast-enter pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl border shadow-xl text-xs font-semibold max-w-sm bg-white text-august-dark border-august-border'
+          : 'toast-enter pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl border shadow-xl text-xs font-semibold max-w-sm bg-august-forest text-white border-emerald-700'"
+    >
+      <app-icon [name]="t.type === 'alert' ? 'alertSiren' : 'checkSeal'" iconClass="w-4 h-4 shrink-0" />
+      <span>{{ t.message }}</span>
+    </div>
+  }
+</div>
+
+<!-- 2-Second Mascot Running Tab Transition Loader -->
+@if (care.isTabLoading()) {
+  <app-mascot-loader />
+}
+
+@if (!care.isAuthenticated()) {
+  <router-outlet />
+} @else {
+  <app-hospital-bg
+    [videoSrc]="activeBackgroundVideo()"
+    [scrimClass]="care.isRedDashboardActive()
+      ? 'fixed inset-0 alert-crimson-scrim pointer-events-none z-0 transition-all duration-500'
+      : 'fixed inset-0 bg-[#F8F7F2]/75 pointer-events-none z-0 transition-all duration-500'"
+  />
+
+  <div class="relative z-10 min-h-screen flex flex-col">
+    <!-- Top Header -->
+    <header class="alert-surface-header sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-august-border px-4 lg:px-8 py-3 flex items-center justify-between shadow-xs transition-colors">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-august-forest text-white flex items-center justify-center shadow-xs">
+          <app-icon name="brandLogo" iconClass="w-6 h-6" />
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-base font-serif font-bold text-august-dark tracking-tight">August Care</span>
+            <span class="px-2 py-0.5 rounded-full bg-august-sage text-august-forest text-[10px] font-bold uppercase tracking-wider">Angular RPM</span>
+          </div>
+          <p class="text-[11px] text-august-warmGray hidden sm:block">Smart Mattress Weight &amp; Symptom Portal</p>
+        </div>
+      </div>
+
+      <!-- Center Hardware Status Pill -->
+      <div class="hidden xl:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-august-ivory border border-august-border text-xs text-august-dark font-medium">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        <app-icon name="mattressScale" iconClass="w-4 h-4 text-august-forest" />
+        <span>Mattress Sensor Online ({{ care.patient().serialNumber }})</span>
+      </div>
+
+      <!-- Right Controls -->
+      <div class="flex items-center gap-2">
+        <div class="bg-august-ivory p-1 rounded-xl border border-august-border flex text-xs">
+          <button
+            type="button"
+            (click)="switchRole('patient')"
+            [class]="care.userRole() === 'patient'
+              ? 'px-3 py-1.5 rounded-lg bg-august-forest text-white font-bold transition shadow-xs flex items-center gap-1.5'
+              : 'px-3 py-1.5 rounded-lg text-august-warmGray hover:text-august-dark transition flex items-center gap-1.5'"
+          >
+            <app-icon name="profile" iconClass="w-3.5 h-3.5" />
+            <span class="hidden sm:inline">Patient</span>
+          </button>
+          <button
+            type="button"
+            (click)="switchRole('prescriber')"
+            [class]="care.userRole() === 'prescriber'
+              ? 'px-3 py-1.5 rounded-lg bg-august-forest text-white font-bold transition shadow-xs flex items-center gap-1.5'
+              : 'px-3 py-1.5 rounded-lg text-august-warmGray hover:text-august-dark transition flex items-center gap-1.5'"
+          >
+            <app-icon name="stethoscope" iconClass="w-3.5 h-3.5" />
+            <span class="hidden sm:inline">Prescriber</span>
+          </button>
+        </div>
+
+        <button
+          type="button"
+          (click)="care.toggleFastNavigation()"
+          [title]="care.fastNavigation() ? 'Fast Nav ON (Skip 1.8s transition)' : 'Mascot Transition ON (1.8s)'"
+          [class]="care.fastNavigation()
+            ? 'hidden sm:flex px-2.5 py-2 rounded-xl text-[11px] font-bold bg-indigo-50 border border-indigo-200 text-indigo-700 transition items-center gap-1'
+            : 'hidden sm:flex px-2.5 py-2 rounded-xl text-[11px] font-semibold bg-august-ivory border border-august-border text-august-warmGray hover:text-august-dark transition items-center gap-1'"
+        >
+          <span>{{ care.fastNavigation() ? '⚡ Fast Nav' : '🐾 1.8s Nav' }}</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="care.toggleAlertSimulation()"
+          [class]="care.clinicalMetrics().isConcerning
+            ? 'px-3 py-2 rounded-xl text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white transition flex items-center gap-1.5 shadow-xs'
+            : 'px-3 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white transition flex items-center gap-1.5 shadow-xs'"
+        >
+          <app-icon name="alertSiren" iconClass="w-4 h-4" />
+          <span class="hidden md:inline">{{ care.clinicalMetrics().isConcerning ? 'Simulate Normal Day' : 'Simulate >2 lbs Spike' }}</span>
+          <span class="md:hidden">Test Alert</span>
+        </button>
+
+        @if (care.userRole() === 'patient') {
+          <button
+            type="button"
+            (click)="care.reopenSymptomGate()"
+            title="Re-open Daily Symptom Questions"
+            class="p-2 rounded-xl bg-august-ivory hover:bg-white border border-august-border text-august-forest transition"
+          >
+            <app-icon name="sync" iconClass="w-4 h-4" />
+          </button>
+        }
+
+        <div class="flex items-center gap-2 pl-2 border-l border-august-border">
+          <div class="w-8 h-8 rounded-xl bg-august-sage text-august-forest flex items-center justify-center font-bold text-xs">
+            {{ care.userInitials() }}
+          </div>
+          <button
+            type="button"
+            (click)="signOut()"
+            title="Sign Out"
+            class="px-2.5 py-1.5 bg-august-ivory hover:bg-red-50 border border-august-border hover:border-red-200 text-august-warmGray hover:text-red-700 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition"
+          >
+            <app-icon name="logOut" iconClass="w-3.5 h-3.5" />
+            <span class="hidden sm:inline">Sign Out</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Mandatory Symptom Gate (before patient accesses dashboard) -->
+    @if (care.userRole() === 'patient' && !care.symptomGateCompleted()) {
+      <app-symptom-gate />
+    }
+
+    <!-- Main Workspace -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6 has-mobile-nav">
+      @if (care.userRole() === 'patient') {
+        <!-- Patient Banner + Desktop 3-Page Navigation -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-august-border shadow-sm">
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-august-ivory border border-august-border p-1 shrink-0 shadow-xs overflow-hidden hidden sm:block">
+              <img src="media/images/mascot.jpg" alt="Care Mascot" class="w-full h-full object-contain rounded-xl" />
+            </div>
+            <div>
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-[11px] font-bold uppercase tracking-widest text-august-warmGray">Patient Care Portal</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-august-sage text-august-forest text-[11px] font-semibold">
+                  Today's Check-in: {{ care.symptomSummary() }}
+                </span>
+              </div>
+              <h1 class="text-2xl sm:text-3xl font-serif text-august-dark font-medium pt-1">{{ care.patient().name }}</h1>
+              <p class="text-xs text-august-warmGray">Connected Mattress Scale • Cardiology Monitoring with {{ care.patient().prescriberName }}</p>
+            </div>
+          </div>
+
+          <nav aria-label="Primary Pages" class="hidden md:flex bg-august-ivory p-1.5 rounded-2xl border border-august-border text-xs">
+            <a
+              routerLink="/home"
+              routerLinkActive="bg-white text-august-forest shadow-xs font-bold"
+              class="px-4 py-2 rounded-xl text-august-warmGray hover:text-august-dark flex items-center gap-2 font-semibold transition"
+            >
+              <app-icon name="dashboard" iconClass="w-4 h-4" />
+              <span>Home</span>
+            </a>
+            <a
+              routerLink="/chat"
+              routerLinkActive="bg-white text-august-forest shadow-xs font-bold"
+              class="px-4 py-2 rounded-xl text-august-warmGray hover:text-august-dark flex items-center gap-2 font-semibold transition relative"
+            >
+              <app-icon name="chat" iconClass="w-4 h-4" />
+              <span>Prescriber Chat</span>
+              @if (care.unreadChatCount() > 0) {
+                <span class="w-2 h-2 rounded-full bg-red-600"></span>
+              }
+            </a>
+            <a
+              routerLink="/profile"
+              routerLinkActive="bg-white text-august-forest shadow-xs font-bold"
+              class="px-4 py-2 rounded-xl text-august-warmGray hover:text-august-dark flex items-center gap-2 font-semibold transition"
+            >
+              <app-icon name="profile" iconClass="w-4 h-4" />
+              <span>Profile</span>
+            </a>
+          </nav>
+        </div>
+      }
+
+      <router-outlet />
+
+      <!-- Clinical Safety & Demo Scope Disclaimer Footer -->
+      <footer class="bg-white/90 backdrop-blur-sm border border-august-border rounded-2xl px-4 py-3 text-[11px] text-august-warmGray flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <span>
+          <b class="text-august-dark">Clinical Demo Disclaimer:</b> Alerts are reviewed asynchronously during clinic hours. Not for acute emergencies—call <b>911</b> for severe chest pain or breathing trouble.
+        </span>
+        <span class="font-semibold text-august-forest shrink-0">Prescriber: {{ care.patient().prescriberName }}</span>
+      </footer>
+    </main>
+
+    @if (care.userRole() === 'patient' && care.symptomGateCompleted()) {
+      <app-mascot-buddy />
+    }
+
+    <!-- Mobile Bottom Tab Navigation (iPhone / Small Screens) -->
+    @if (care.userRole() === 'patient') {
+      <nav aria-label="Mobile Navigation" class="md:hidden mobile-bottom-nav fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-august-border flex items-center justify-around px-2 pt-1.5 shadow-lg">
+        <a
+          routerLink="/home"
+          routerLinkActive="text-august-forest font-bold"
+          class="flex-1 flex flex-col items-center justify-center gap-1 py-1.5 text-august-warmGray font-medium transition"
+        >
+          <app-icon name="dashboard" iconClass="w-5 h-5" />
+          <span class="text-[11px]">Home</span>
+        </a>
+        <a
+          routerLink="/chat"
+          routerLinkActive="text-august-forest font-bold"
+          class="flex-1 flex flex-col items-center justify-center gap-1 py-1.5 text-august-warmGray font-medium relative transition"
+        >
+          <app-icon name="chat" iconClass="w-5 h-5" />
+          <span class="text-[11px]">Chat</span>
+          @if (care.unreadChatCount() > 0) {
+            <span class="w-2 h-2 rounded-full bg-red-600 absolute top-1.5 right-1/3"></span>
+          }
+        </a>
+        <a
+          routerLink="/profile"
+          routerLinkActive="text-august-forest font-bold"
+          class="flex-1 flex flex-col items-center justify-center gap-1 py-1.5 text-august-warmGray font-medium transition"
+        >
+          <app-icon name="profile" iconClass="w-5 h-5" />
+          <span class="text-[11px]">Profile</span>
+        </a>
+      </nav>
+    }
+  </div>
+}

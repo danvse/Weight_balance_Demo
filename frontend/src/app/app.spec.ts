@@ -1,0 +1,231 @@
+import { TestBed } from '@angular/core/testing';
+import { Router, provideRouter } from '@angular/router';
+import { vi } from 'vitest';
+import { App } from './app';
+import { routes } from './app.routes';
+import { CareStateService } from './core/services/care-state.service';
+
+describe('August Care Angular RPM App', () => {
+  beforeEach(async () => {
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [App],
+      providers: [provideRouter(routes)]
+    }).compileComponents();
+  });
+
+  it('should create the app', () => {
+    const fixture = TestBed.createComponent(App);
+    expect(fixture.componentInstance).toBeTruthy();
+  });
+
+  it('should default to normal weight and trigger red dashboard state on >2 lbs fluid gain', () => {
+    const care = TestBed.inject(CareStateService);
+    care.login('patient');
+    expect(care.clinicalMetrics().isConcerning).toBe(false);
+    expect(care.isRedDashboardActive()).toBe(false);
+
+    care.toggleAlertSimulation();
+    expect(care.clinicalMetrics().isConcerning).toBe(true);
+    expect(care.isRedDashboardActive()).toBe(true);
+  });
+
+  it('should complete symptom gate before allowing dashboard access', () => {
+    const care = TestBed.inject(CareStateService);
+    care.login('patient');
+    expect(care.symptomGateCompleted()).toBe(false);
+
+    care.submitSymptoms({
+      shortnessOfBreath: 'mild',
+      poorAppetite: false,
+      hasSwelling: true,
+      swellingLocations: ['Feet & Ankles'],
+      swellingOther: '',
+      submittedAt: null
+    });
+
+    expect(care.symptomGateCompleted()).toBe(true);
+    expect(care.symptomSummary()).toContain('Feet & Ankles');
+    expect(care.weightHistory()[0].symptoms?.swellingLocations).toContain('Feet & Ankles');
+    expect(care.todaySymptomSeverity()).toBe('severe');
+    expect(care.chatMessages().some(m => m.id === 'sys-symptom-today')).toBe(true);
+  });
+
+  it('should support signing up with first/last name as patient or prescriber', () => {
+    const care = TestBed.inject(CareStateService);
+    care.signUpAccount({
+      firstName: 'Eleanor',
+      lastName: 'Vance',
+      role: 'patient',
+      dob: '1960-08-21',
+      email: 'eleanor@example.com'
+    });
+    expect(care.isAuthenticated()).toBe(true);
+    expect(care.userRole()).toBe('patient');
+    expect(care.patient().name).toBe('Eleanor Vance');
+
+    care.signUpAccount({
+      firstName: 'Marcus',
+      lastName: 'Lee',
+      role: 'prescriber',
+      dob: '1975-02-10',
+      email: 'marcus.lee@clinic.org'
+    });
+    expect(care.userRole()).toBe('prescriber');
+    expect(care.patient().prescriberName).toBe('Dr. Marcus Lee, MD');
+  });
+
+  it('should play the mascot loader for 2 seconds when switching tabs', async () => {
+    vi.useFakeTimers();
+    try {
+      const fixture = TestBed.createComponent(App);
+      const care = TestBed.inject(CareStateService);
+      const router = TestBed.inject(Router);
+      care.login('patient');
+      fixture.detectChanges();
+
+      await router.navigateByUrl('/home');
+      fixture.detectChanges();
+      expect(care.isTabLoading()).toBe(false);
+
+      const navPromise = router.navigateByUrl('/chat');
+      await vi.advanceTimersByTimeAsync(100);
+      fixture.detectChanges();
+
+      expect(care.isTabLoading()).toBe(true);
+      expect(router.url).toBe('/home');
+      const loaderVideo = fixture.nativeElement.querySelector('app-mascot-loader video') as HTMLVideoElement | null;
+      expect(loaderVideo?.getAttribute('src')).toBe('media/videos/mascot-loader.mp4');
+
+      await vi.advanceTimersByTimeAsync(1700);
+      await navPromise;
+      fixture.detectChanges();
+
+      expect(care.isTabLoading()).toBe(false);
+      expect(router.url).toBe('/chat');
+      expect(fixture.nativeElement.querySelector('app-mascot-loader')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('should compute dynamic BMI, weight goal progress, unit conversion, and fluid intake', () => {
+    const care = TestBed.inject(CareStateService);
+
+    const bmi = care.bmiInfo();
+    expect(bmi.score).toBe(24.7);
+    expect(bmi.category).toBe('Healthy');
+    expect(bmi.heightDisplay).toBe(`5' 10"`);
+    expect(bmi.ageYears).toBeGreaterThanOrEqual(67);
+
+    const goal = care.goalProgress();
+    expect(goal.startWeight).toBe(176.0);
+    expect(goal.currentWeight).toBe(172.1);
+    expect(goal.goalWeight).toBe(168.0);
+    expect(goal.percent).toBe(49);
+    expect(goal.onTrack).toBe(true);
+
+    expect(care.weightUnit()).toBe('lbs');
+    care.weightUnit.set('kg');
+    expect(care.convertWeight(172.1)).toBeCloseTo(78.1, 1);
+
+    const startFluid = care.patient().fluidIntakeOz;
+    care.adjustFluidIntake(8);
+    expect(care.patient().fluidIntakeOz).toBe(startFluid + 8);
+  });
+
+  it('should sync medication dose checklist and correlate missed diuretics with weight spikes', () => {
+    const care = TestBed.inject(CareStateService);
+
+    const initial = care.adherenceSummary();
+    expect(initial.takenCount).toBe(2);
+    expect(initial.totalCount).toBe(3);
+    expect(initial.todayDiureticStatus).toBe('taken');
+    expect(initial.sevenDayRatePercent).toBe(86);
+    expect(initial.missedDiureticAlert).toBe(false);
+
+    // Unmark Furosemide (diuretic id 1) and simulate >2 lb weight gain
+    care.toggleMedicationTaken(1);
+    care.toggleAlertSimulation();
+
+    const alerted = care.adherenceSummary();
+    expect(alerted.todayDiureticStatus).toBe('partial');
+    expect(alerted.missedDiureticAlert).toBe(true);
+    expect(care.weightHistory()[0].diureticAdherence).toBe('partial');
+    expect(alerted.correlationNote).toContain('missed diuretic dose');
+
+    // Mark all medications taken and verify sync + timestamp
+    care.markAllMedicationsTaken();
+    const resolved = care.adherenceSummary();
+    expect(resolved.takenCount).toBe(3);
+    expect(resolved.todayDiureticStatus).toBe('taken');
+    expect(resolved.missedDiureticAlert).toBe(false);
+    expect(care.patient().medications.every(m => m.takenToday && Boolean(m.takenAt))).toBe(true);
+  });
+
+  it('should evaluate morning BP, heart rate, and SpO2 vitals alerts during check-in', () => {
+    const care = TestBed.inject(CareStateService);
+
+    expect(care.vitalsStatus().isConcerning).toBe(false);
+    expect(care.vitalsStatus().summaryLabel).toBe('BP 118/74 • HR 72 • SpO₂ 97%');
+
+    care.submitSymptoms({
+      shortnessOfBreath: 'mild',
+      poorAppetite: false,
+      hasSwelling: false,
+      swellingLocations: [],
+      swellingOther: '',
+      vitals: { systolicBp: 90, diastolicBp: 56, heartRate: 115, spo2: 90, source: 'bluetooth' },
+      submittedAt: null
+    });
+
+    const v = care.vitalsStatus();
+    expect(v.isConcerning).toBe(true);
+    expect(v.isHypotensive).toBe(true);
+    expect(v.isHypoxic).toBe(true);
+    expect(v.isTachyOrBrady).toBe(true);
+    expect(care.weightHistory()[0].vitals?.spo2).toBe(90);
+    expect(care.chatMessages().some(m => m.id === 'sys-symptom-today' && m.text.includes('Low SpO₂'))).toBe(true);
+  });
+
+  it('should support prescriber branding, next visit updates, gate cancel, fast nav, and kg unit delta', () => {
+    const care = TestBed.inject(CareStateService);
+
+    expect(care.canDismissSymptomGate()).toBe(false);
+    care.submitSymptoms({
+      shortnessOfBreath: 'none',
+      poorAppetite: false,
+      hasSwelling: false,
+      swellingLocations: [],
+      swellingOther: '',
+      submittedAt: null
+    });
+    expect(care.canDismissSymptomGate()).toBe(true);
+
+    care.reopenSymptomGate();
+    expect(care.symptomGateCompleted()).toBe(false);
+    care.closeSymptomGateEditor();
+    expect(care.symptomGateCompleted()).toBe(true);
+
+    care.signUpAccount({
+      firstName: 'Marcus',
+      lastName: 'Lee',
+      role: 'prescriber',
+      dob: '1975-02-10',
+      email: 'marcus.lee@clinic.org'
+    });
+    expect(care.prescriberShortName()).toBe('Dr. Lee');
+    expect(care.prescriberInitials()).toBe('ML');
+
+    care.updateProfile({ nextVisitDate: '2026-12-20' });
+    expect(care.patient().nextVisitDate).toBe('2026-12-20');
+
+    care.weightUnit.set('kg');
+    expect(care.formatUnitDelta(2.0)).toBe('+0.9 kg');
+    expect(care.toLbs(care.convertWeight(172.0))).toBeCloseTo(172.0, 0);
+
+    expect(care.fastNavigation()).toBe(false);
+    care.toggleFastNavigation();
+    expect(care.fastNavigation()).toBe(true);
+  });
+});

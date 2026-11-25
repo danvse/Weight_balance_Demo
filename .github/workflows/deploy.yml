@@ -3,6 +3,8 @@ name: Deploy Angular Demo to GitHub Pages
 on:
   push:
     branches: ['main']
+  pull_request:
+    branches: ['main']
   workflow_dispatch:
 
 permissions:
@@ -17,6 +19,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -26,31 +31,51 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm'
-          cache-dependency-path: 'august-care-angular/package-lock.json'
+          cache-dependency-path: 'frontend/package-lock.json'
 
       - name: Install dependencies
-        working-directory: august-care-angular
         run: npm ci
 
+      - name: Type-check TypeScript
+        run: npx tsc --noEmit -p tsconfig.app.json
+
       - name: Run unit tests
-        working-directory: august-care-angular
         run: npx ng test --watch=false
 
       - name: Build Angular production bundle
-        working-directory: august-care-angular
         run: npx ng build --configuration production --base-href /Weight_balance_Demo/
+
+      - name: Verify production bundle & media assets
+        run: |
+          for file in \
+            dist/august-care-angular/browser/index.html \
+            dist/august-care-angular/browser/favicon.ico \
+            dist/august-care-angular/browser/media/images/mascot.jpg \
+            dist/august-care-angular/browser/media/videos/mascot-loader.mp4 \
+            dist/august-care-angular/browser/media/videos/hospital-bg.mp4 \
+            dist/august-care-angular/browser/media/videos/clinic-bg.mp4 \
+            dist/august-care-angular/browser/media/videos/consult-bg.mp4 \
+            dist/august-care-angular/browser/media/videos/atrium-bg.mp4; do
+            test -f "$file" || { echo "Missing required deploy asset: $file"; exit 1; }
+          done
 
       - name: Add SPA fallback and .nojekyll
         run: |
-          cp august-care-angular/dist/august-care-angular/browser/index.html august-care-angular/dist/august-care-angular/browser/404.html
-          touch august-care-angular/dist/august-care-angular/browser/.nojekyll
+          cp dist/august-care-angular/browser/index.html dist/august-care-angular/browser/404.html
+          touch dist/august-care-angular/browser/.nojekyll
+
+      - name: Configure GitHub Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
 
       - name: Upload GitHub Pages artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: august-care-angular/dist/august-care-angular/browser
+          path: frontend/dist/august-care-angular/browser
 
   deploy:
+    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

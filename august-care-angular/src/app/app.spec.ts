@@ -162,4 +162,29 @@ describe('August Care Angular RPM App', () => {
     expect(resolved.missedDiureticAlert).toBe(false);
     expect(care.patient().medications.every(m => m.takenToday && Boolean(m.takenAt))).toBe(true);
   });
+
+  it('should evaluate morning BP, heart rate, and SpO2 vitals alerts during check-in', () => {
+    const care = TestBed.inject(CareStateService);
+
+    expect(care.vitalsStatus().isConcerning).toBe(false);
+    expect(care.vitalsStatus().summaryLabel).toBe('BP 118/74 • HR 72 • SpO₂ 97%');
+
+    care.submitSymptoms({
+      shortnessOfBreath: 'mild',
+      poorAppetite: false,
+      hasSwelling: false,
+      swellingLocations: [],
+      swellingOther: '',
+      vitals: { systolicBp: 90, diastolicBp: 56, heartRate: 115, spo2: 90, source: 'bluetooth' },
+      submittedAt: null
+    });
+
+    const v = care.vitalsStatus();
+    expect(v.isConcerning).toBe(true);
+    expect(v.isHypotensive).toBe(true);
+    expect(v.isHypoxic).toBe(true);
+    expect(v.isTachyOrBrady).toBe(true);
+    expect(care.weightHistory()[0].vitals?.spo2).toBe(90);
+    expect(care.chatMessages().some(m => m.id === 'sys-symptom-today' && m.text.includes('Low SpO₂'))).toBe(true);
+  });
 });

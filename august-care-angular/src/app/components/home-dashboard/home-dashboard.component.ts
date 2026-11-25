@@ -78,6 +78,30 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
         </div>
       }
 
+      <!-- Urgent Morning Vitals Banner (Hypotension, Low SpO2, Abnormal BP/HR) -->
+      @if (care.symptomGateCompleted() && vitals().isConcerning) {
+        <div class="p-5 bg-rose-50 border-2 border-rose-500 rounded-3xl shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-start gap-3.5">
+            <div class="w-11 h-11 rounded-2xl bg-rose-600 text-white flex items-center justify-center shrink-0">
+              <app-icon name="stethoscope" iconClass="w-6 h-6" />
+            </div>
+            <div>
+              <div class="text-sm font-extrabold uppercase tracking-wider text-rose-800">Urgent Vitals Flag: {{ vitals().alertReasons.join(' • ') }}</div>
+              <p class="text-xs sm:text-sm text-august-dark font-medium pt-1">
+                Morning reading logged <b>{{ vitals().summaryLabel }}</b>. Please sit or rest comfortably, hold extra diuretic doses if hypotensive, and notify Dr. Miller right away.
+              </p>
+            </div>
+          </div>
+          <a
+            routerLink="/chat"
+            class="px-4 py-2.5 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 shrink-0"
+          >
+            <app-icon name="chat" iconClass="w-4 h-4" />
+            <span>Alert Prescriber Now</span>
+          </a>
+        </div>
+      }
+
       <!-- ============================================== -->
       <!-- HEALTH & WEIGHT GOAL OVERVIEW (4 Vibrant Tiles + Unit Toggle) -->
       <!-- ============================================== -->
@@ -181,6 +205,58 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
               <circle cx="48" cy="6" r="3" fill="white" />
             </svg>
           </div>
+        </div>
+
+        <!-- Morning Cuff BP, Heart Rate & SpO2 Telemetry Strip -->
+        <div
+          [class]="vitals().isConcerning
+            ? 'p-3.5 rounded-2xl bg-rose-50/90 border border-rose-200 flex flex-wrap items-center justify-between gap-3'
+            : 'p-3.5 rounded-2xl bg-august-ivory border border-august-border flex flex-wrap items-center justify-between gap-3'"
+        >
+          <div class="flex flex-wrap items-center gap-3 sm:gap-5">
+            <div class="flex items-center gap-2">
+              <div [class]="vitals().isConcerning ? 'w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center' : 'w-8 h-8 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center'">
+                <app-icon name="stethoscope" iconClass="w-4 h-4" />
+              </div>
+              <div>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-august-warmGray block">Morning Vitals</span>
+                <span class="text-xs font-bold text-august-dark">
+                  {{ vitals().latest.source === 'bluetooth' ? 'Bluetooth Cuff & SpO₂' : 'Manual Check-In' }}
+                </span>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3 text-xs">
+              <span class="px-3 py-1 rounded-xl bg-white border border-august-border font-bold text-august-dark">
+                BP:
+                <span [class]="vitals().isHypotensive || vitals().isHypertensive ? 'text-rose-700' : 'text-august-forest'">
+                  {{ vitals().latest.systolicBp ?? '--' }}/{{ vitals().latest.diastolicBp ?? '--' }}
+                </span>
+                <span class="text-[10px] font-normal text-august-warmGray">mmHg</span>
+              </span>
+              <span class="px-3 py-1 rounded-xl bg-white border border-august-border font-bold text-august-dark">
+                HR:
+                <span [class]="vitals().isTachyOrBrady ? 'text-rose-700' : 'text-august-forest'">
+                  {{ vitals().latest.heartRate ?? '--' }}
+                </span>
+                <span class="text-[10px] font-normal text-august-warmGray">bpm</span>
+              </span>
+              <span class="px-3 py-1 rounded-xl bg-white border border-august-border font-bold text-august-dark">
+                SpO₂:
+                <span [class]="vitals().isHypoxic ? 'text-rose-700' : 'text-sky-700'">
+                  {{ vitals().latest.spo2 ?? '--' }}%
+                </span>
+              </span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            (click)="care.reopenSymptomGate()"
+            class="px-3 py-1.5 rounded-xl bg-white hover:bg-august-sage border border-august-border text-[11px] font-bold text-august-forest transition shrink-0"
+          >
+            Update Vitals
+          </button>
         </div>
       </div>
 
@@ -410,6 +486,15 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
                           >
                             {{ row.diureticAdherence === 'missed' ? 'Diuretic Missed' : row.diureticAdherence === 'partial' ? 'Partial Rx' : 'Diuretics ✓' }}
                           </span>
+                          @if (row.vitals) {
+                            <span
+                              [class]="care.evaluateVitals(row.vitals).isConcerning
+                                ? 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700'
+                                : 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-800'"
+                            >
+                              {{ care.formatVitalsShort(row.vitals) }}
+                            </span>
+                          }
                         </div>
                       </td>
                       <td class="py-3 px-4 text-right whitespace-nowrap">
@@ -625,6 +710,15 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
                           : 'px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-august-sage text-august-forest'"
                     >
                       {{ chip }}
+                    </span>
+                  }
+                  @if (sel.vitals) {
+                    <span
+                      [class]="care.evaluateVitals(sel.vitals).isConcerning
+                        ? 'px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-700'
+                        : 'px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-100 text-sky-800'"
+                    >
+                      {{ care.formatVitalsShort(sel.vitals) }}
                     </span>
                   }
                 </div>
@@ -848,6 +942,7 @@ export class HomeDashboardComponent {
   readonly goal = this.care.goalProgress;
   readonly trends = this.care.trendStats;
   readonly adherence = this.care.adherenceSummary;
+  readonly vitals = this.care.vitalsStatus;
 
   readonly selectedCheckInId = signal<number>(7);
   readonly isMedChecklistOpen = signal<boolean>(false);

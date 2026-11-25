@@ -65,12 +65,34 @@ export interface GoalProgressInfo {
   onTrack: boolean;
 }
 
+export interface VitalSigns {
+  systolicBp: number | null;
+  diastolicBp: number | null;
+  heartRate: number | null;
+  spo2: number | null;
+  source?: 'manual' | 'bluetooth';
+}
+
+export interface VitalsStatusInfo {
+  latest: VitalSigns;
+  hasReading: boolean;
+  isHypotensive: boolean;
+  isHypertensive: boolean;
+  isHypoxic: boolean;
+  isTachyOrBrady: boolean;
+  isConcerning: boolean;
+  severity: 'normal' | 'watch' | 'urgent';
+  summaryLabel: string;
+  alertReasons: string[];
+}
+
 export interface SymptomCheck {
   shortnessOfBreath: BreathStatus;
   poorAppetite: boolean;
   hasSwelling: boolean;
   swellingLocations: string[];
   swellingOther: string;
+  vitals?: VitalSigns;
   submittedAt: string | null;
 }
 
@@ -81,6 +103,7 @@ export interface WeightEntry {
   weight: number;
   syncTime: string;
   symptoms?: SymptomCheck;
+  vitals?: VitalSigns;
   diureticAdherence?: AdherenceStatus;
   medicationsTakenCount?: number;
   medicationsTotalCount?: number;
@@ -99,6 +122,7 @@ export interface ChartSeriesPoint {
   syncTime: string;
   symptomSummary?: string;
   symptomSeverity?: SymptomSeverity;
+  vitals?: VitalSigns;
   diureticAdherence?: AdherenceStatus;
 }
 

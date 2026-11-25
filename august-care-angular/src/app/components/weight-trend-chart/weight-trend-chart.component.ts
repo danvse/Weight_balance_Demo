@@ -78,6 +78,14 @@ interface PlottedNode extends ChartSeriesPoint {
                   Check-in: {{ tip.symptomSummary }}
                 </div>
               }
+              @if (tip.vitals) {
+                <div
+                  class="text-[10px] mt-0.5 font-medium"
+                  [class]="care.evaluateVitals(tip.vitals).isConcerning ? 'text-rose-300 font-bold' : 'text-sky-200'"
+                >
+                  {{ care.formatVitalsShort(tip.vitals) }}
+                </div>
+              }
               @if (tip.diureticAdherence) {
                 <div
                   class="text-[10px] mt-0.5 font-semibold"
@@ -240,6 +248,7 @@ export class WeightTrendChartComponent {
             syncTime: item.syncTime,
             symptomSummary: this.care.formatSymptomChips(item.symptoms).join(' • '),
             symptomSeverity: this.care.getSymptomSeverity(item.symptoms),
+            vitals: item.vitals,
             diureticAdherence: item.diureticAdherence
           };
         });

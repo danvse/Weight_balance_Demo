@@ -16,11 +16,13 @@ import {
   TimeRange,
   ToastItem,
   UserRole,
+  VitalSigns,
+  VitalsStatusInfo,
   WeightEntry,
   WeightUnit
 } from '../models/care.models';
 
-const STORAGE_KEY = 'august_care_angular_rpm_v5';
+const STORAGE_KEY = 'august_care_angular_rpm_v6';
 
 interface PersistedState {
   isAuthenticated: boolean;
@@ -74,6 +76,7 @@ const DEFAULT_PERSISTED: PersistedState = {
     hasSwelling: false,
     swellingLocations: [],
     swellingOther: '',
+    vitals: { systolicBp: 118, diastolicBp: 74, heartRate: 72, spo2: 97, source: 'bluetooth' },
     submittedAt: null
   },
   prescriberUpdate: {
@@ -91,6 +94,7 @@ const DEFAULT_PERSISTED: PersistedState = {
       fullDate: 'Nov 24',
       weight: 172.1,
       syncTime: '6:15 AM',
+      vitals: { systolicBp: 118, diastolicBp: 74, heartRate: 72, spo2: 97, source: 'bluetooth' },
       diureticAdherence: 'taken',
       medicationsTakenCount: 2,
       medicationsTotalCount: 3
@@ -101,6 +105,7 @@ const DEFAULT_PERSISTED: PersistedState = {
       fullDate: 'Nov 23',
       weight: 172.0,
       syncTime: '6:08 AM',
+      vitals: { systolicBp: 120, diastolicBp: 76, heartRate: 70, spo2: 98, source: 'bluetooth' },
       diureticAdherence: 'taken',
       medicationsTakenCount: 3,
       medicationsTotalCount: 3,
@@ -112,6 +117,7 @@ const DEFAULT_PERSISTED: PersistedState = {
       fullDate: 'Nov 22',
       weight: 172.2,
       syncTime: '6:22 AM',
+      vitals: { systolicBp: 124, diastolicBp: 78, heartRate: 75, spo2: 96, source: 'manual' },
       diureticAdherence: 'missed',
       medicationsTakenCount: 1,
       medicationsTotalCount: 3,
@@ -123,6 +129,7 @@ const DEFAULT_PERSISTED: PersistedState = {
       fullDate: 'Nov 21',
       weight: 171.8,
       syncTime: '6:11 AM',
+      vitals: { systolicBp: 116, diastolicBp: 72, heartRate: 68, spo2: 98, source: 'bluetooth' },
       diureticAdherence: 'taken',
       medicationsTakenCount: 3,
       medicationsTotalCount: 3,
@@ -134,6 +141,7 @@ const DEFAULT_PERSISTED: PersistedState = {
       fullDate: 'Nov 20',
       weight: 172.1,
       syncTime: '6:19 AM',
+      vitals: { systolicBp: 119, diastolicBp: 75, heartRate: 71, spo2: 97, source: 'bluetooth' },
       diureticAdherence: 'taken',
       medicationsTakenCount: 3,
       medicationsTotalCount: 3,
@@ -145,6 +153,7 @@ const DEFAULT_PERSISTED: PersistedState = {
       fullDate: 'Nov 19',
       weight: 171.9,
       syncTime: '6:05 AM',
+      vitals: { systolicBp: 117, diastolicBp: 73, heartRate: 69, spo2: 98, source: 'bluetooth' },
       diureticAdherence: 'taken',
       medicationsTakenCount: 3,
       medicationsTotalCount: 3,
@@ -156,6 +165,7 @@ const DEFAULT_PERSISTED: PersistedState = {
       fullDate: 'Nov 18',
       weight: 172.0,
       syncTime: '6:14 AM',
+      vitals: { systolicBp: 121, diastolicBp: 75, heartRate: 73, spo2: 97, source: 'bluetooth' },
       diureticAdherence: 'taken',
       medicationsTakenCount: 3,
       medicationsTotalCount: 3,
@@ -418,6 +428,11 @@ export class CareStateService {
     };
   });
 
+  readonly vitalsStatus = computed<VitalsStatusInfo>(() => {
+    const v = this.todaySymptoms().vitals ?? this.weightHistory()[0]?.vitals;
+    return this.evaluateVitals(v);
+  });
+
   readonly isRedDashboardActive = computed(
     () => this.isAuthenticated() && this.userRole() === 'patient' && this.clinicalMetrics().isConcerning
   );
@@ -550,17 +565,22 @@ export class CareStateService {
 
     this.todaySymptoms.set(submitted);
     this.weightHistory.update(rows =>
-      rows.map((r, i) => (i === 0 ? { ...r, symptoms: submitted } : r))
+      rows.map((r, i) =>
+        i === 0 ? { ...r, symptoms: submitted, vitals: submitted.vitals ?? r.vitals } : r
+      )
     );
     this.symptomGateCompleted.set(true);
 
     const severity = this.getSymptomSeverity(submitted);
     const chips = this.formatSymptomChips(submitted);
+    const vitalsEval = this.evaluateVitals(submitted.vitals);
 
-    // Automatically log mild or severe morning symptoms to Prescriber Chat
-    if (severity !== 'clear') {
+    // Automatically log mild/severe symptoms or abnormal vitals to Prescriber Chat
+    if (severity !== 'clear' || vitalsEval.isConcerning) {
       const metrics = this.clinicalMetrics();
-      const cardText = `Morning Health Check (${timeStr}): ${chips.join(', ')} • Mattress weight ${metrics.latestWeight.toFixed(1)} lbs (${this.formatDelta(metrics.baselineDelta)} vs baseline).`;
+      const vitalsText = vitalsEval.hasReading ? ` • Vitals: ${vitalsEval.summaryLabel}` : '';
+      const alertText = vitalsEval.alertReasons.length ? ` • Alerts: ${vitalsEval.alertReasons.join(', ')}` : '';
+      const cardText = `Morning Health Check (${timeStr}): ${chips.join(', ')}${vitalsText}${alertText} • Mattress weight ${metrics.latestWeight.toFixed(1)} lbs (${this.formatDelta(metrics.baselineDelta)} vs baseline).`;
       this.chatMessages.update(list => {
         const filtered = list.filter(m => m.id !== 'sys-symptom-today');
         return [
@@ -568,24 +588,98 @@ export class CareStateService {
           { id: 'sys-symptom-today', sender: 'system', text: cardText, time: timeStr }
         ];
       });
-      if (severity === 'severe') {
+      if (severity === 'severe' || vitalsEval.isConcerning) {
         this.unreadChatCount.update(c => c + 1);
       }
     } else {
       this.chatMessages.update(list => list.filter(m => m.id !== 'sys-symptom-today'));
     }
 
-    if ((this.clinicalMetrics().isConcerning && !this.alertAcknowledged()) || submitted.shortnessOfBreath === 'rest') {
+    if (
+      (this.clinicalMetrics().isConcerning && !this.alertAcknowledged()) ||
+      submitted.shortnessOfBreath === 'rest' ||
+      vitalsEval.isConcerning
+    ) {
       this.playAlarmChime();
     }
 
-    if (submitted.shortnessOfBreath === 'rest') {
+    if (vitalsEval.isConcerning) {
+      this.showToast(`Urgent Vitals Alert: ${vitalsEval.alertReasons.join(', ')}. Contact Dr. Miller.`, 'alert');
+    } else if (submitted.shortnessOfBreath === 'rest') {
       this.showToast('Urgent: Breathing trouble at rest logged. Please contact Dr. Miller.', 'alert');
     } else if (severity !== 'clear') {
       this.showToast('Morning symptoms logged and shared with Dr. Miller in Chat.', 'info');
     } else {
-      this.showToast('Morning health check logged — looking good today!', 'success');
+      this.showToast('Morning health check & vitals logged — looking good today!', 'success');
     }
+  }
+
+  evaluateVitals(v?: VitalSigns): VitalsStatusInfo {
+    const latest: VitalSigns = v ?? { systolicBp: null, diastolicBp: null, heartRate: null, spo2: null };
+    const hasReading =
+      latest.systolicBp != null || latest.diastolicBp != null || latest.heartRate != null || latest.spo2 != null;
+
+    const isHypotensive =
+      (latest.systolicBp != null && latest.systolicBp < 95) ||
+      (latest.diastolicBp != null && latest.diastolicBp < 60);
+    const isHypertensive =
+      (latest.systolicBp != null && latest.systolicBp >= 160) ||
+      (latest.diastolicBp != null && latest.diastolicBp >= 100);
+    const isHypoxic = latest.spo2 != null && latest.spo2 < 92;
+    const isTachyOrBrady = latest.heartRate != null && (latest.heartRate > 110 || latest.heartRate < 50);
+
+    const alertReasons: string[] = [];
+    if (isHypotensive) {
+      alertReasons.push(`Low BP (${latest.systolicBp ?? '--'}/${latest.diastolicBp ?? '--'} mmHg)`);
+    }
+    if (isHypertensive) {
+      alertReasons.push(`High BP (${latest.systolicBp ?? '--'}/${latest.diastolicBp ?? '--'} mmHg)`);
+    }
+    if (isHypoxic) {
+      alertReasons.push(`Low SpO₂ (${latest.spo2}%)`);
+    }
+    if (isTachyOrBrady) {
+      alertReasons.push(`Abnormal HR (${latest.heartRate} bpm)`);
+    }
+
+    const isConcerning = alertReasons.length > 0;
+    const isWatch =
+      !isConcerning &&
+      ((latest.spo2 != null && latest.spo2 <= 94) ||
+        (latest.systolicBp != null && latest.systolicBp >= 140) ||
+        (latest.heartRate != null && latest.heartRate >= 95));
+
+    const severity: VitalsStatusInfo['severity'] = isConcerning ? 'urgent' : isWatch ? 'watch' : 'normal';
+
+    return {
+      latest,
+      hasReading,
+      isHypotensive,
+      isHypertensive,
+      isHypoxic,
+      isTachyOrBrady,
+      isConcerning,
+      severity,
+      summaryLabel: this.formatVitalsShort(latest),
+      alertReasons
+    };
+  }
+
+  formatVitalsShort(v?: VitalSigns): string {
+    if (!v || (v.systolicBp == null && v.diastolicBp == null && v.heartRate == null && v.spo2 == null)) {
+      return 'No vitals logged';
+    }
+    const parts: string[] = [];
+    if (v.systolicBp != null && v.diastolicBp != null) {
+      parts.push(`BP ${v.systolicBp}/${v.diastolicBp}`);
+    }
+    if (v.heartRate != null) {
+      parts.push(`HR ${v.heartRate}`);
+    }
+    if (v.spo2 != null) {
+      parts.push(`SpO₂ ${v.spo2}%`);
+    }
+    return parts.join(' • ');
   }
 
   getSymptomSeverity(s?: SymptomCheck): SymptomSeverity {
@@ -809,6 +903,16 @@ export class CareStateService {
       if (lower.includes('furosemide') || lower.includes('lasix') || lower.includes('pill') || lower.includes('diuretic')) {
         reply =
           'Yes, since your weight is above your 2 lb threshold, please follow your morning step-up dose as listed in your Care Update and keep fluids under 1.5 L today.';
+      } else if (
+        lower.includes('bp') ||
+        lower.includes('blood pressure') ||
+        lower.includes('spo2') ||
+        lower.includes('oxygen') ||
+        lower.includes('heart rate') ||
+        lower.includes('dizzy')
+      ) {
+        reply =
+          'Thank you for sending your blood pressure, heart rate, and SpO₂ readings. Sit or lie down if you feel lightheaded, hold extra diuretic doses if your systolic BP is below 95 mmHg, and call our clinic if SpO₂ stays below 92%.';
       } else if (lower.includes('swelling') || lower.includes('breath') || lower.includes('chest')) {
         reply =
           'I’m reviewing your symptom report right now. If your shortness of breath worsens at rest, please call our triage nurse line immediately or seek urgent care.';
@@ -831,7 +935,9 @@ export class CareStateService {
   shareVitalsInChat(): void {
     const m = this.clinicalMetrics();
     const ad = this.adherenceSummary();
-    const summary = `📊 Shared Vitals Update: Mattress weight ${m.latestWeight.toFixed(1)} lbs (${this.formatDelta(m.baselineDelta)} vs baseline) • Meds: ${ad.takenCount}/${ad.totalCount} taken (Diuretics: ${ad.todayDiureticStatus}). Symptoms: ${this.symptomSummary()}.`;
+    const v = this.vitalsStatus();
+    const vitalsStr = v.hasReading ? ` • Vitals: ${v.summaryLabel}` : '';
+    const summary = `📊 Shared Vitals Update: Mattress weight ${m.latestWeight.toFixed(1)} lbs (${this.formatDelta(m.baselineDelta)} vs baseline)${vitalsStr} • Meds: ${ad.takenCount}/${ad.totalCount} taken (Diuretics: ${ad.todayDiureticStatus}). Symptoms: ${this.symptomSummary()}.`;
     this.sendPatientChat(summary);
   }
 

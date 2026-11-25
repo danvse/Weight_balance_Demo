@@ -33,11 +33,11 @@ import { CustomIconComponent } from '../custom-icon/custom-icon.component';
             <p class="text-xs text-august-warmGray">Automatically flags patients with &gt;2.0 lb weight changes or acute symptoms</p>
           </div>
           <span
-            [class]="metrics().isConcerning
+            [class]="metrics().isConcerning || vitals().isConcerning
               ? 'px-3 py-1 rounded-full bg-red-100 text-red-700 font-bold text-xs'
               : 'px-3 py-1 rounded-full bg-august-sage text-august-forest font-bold text-xs'"
           >
-            {{ metrics().isConcerning ? '1 Critical Alert (>2 lbs)' : '0 Critical Alerts' }}
+            {{ metrics().isConcerning || vitals().isConcerning ? '1 Critical Alert (Weight / Vitals)' : '0 Critical Alerts' }}
           </span>
         </div>
 
@@ -70,7 +70,16 @@ import { CustomIconComponent } from '../custom-icon/custom-icon.component';
                   </span>
                 </td>
                 <td [class]="hasSymFlag() ? 'py-3.5 px-3 text-red-700 font-semibold' : 'py-3.5 px-3 text-august-warmGray'">
-                  {{ care.symptomSummary() }}
+                  <div>{{ care.symptomSummary() }}</div>
+                  @if (vitals().hasReading) {
+                    <span
+                      [class]="vitals().isConcerning
+                        ? 'inline-block mt-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold text-[10px]'
+                        : 'inline-block mt-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-800 font-semibold text-[10px]'"
+                    >
+                      {{ vitals().summaryLabel }}
+                    </span>
+                  }
                 </td>
                 <td class="py-3.5 px-3">
                   <div class="font-bold text-august-dark">{{ primaryDiuretic() }}</div>
@@ -98,7 +107,10 @@ import { CustomIconComponent } from '../custom-icon/custom-icon.component';
                 </td>
                 <td class="py-3.5 px-3 font-serif font-bold text-base">142.1 lbs</td>
                 <td class="py-3.5 px-3"><span class="px-2.5 py-1 rounded-full bg-august-sage text-august-forest font-bold text-xs">-0.1 lbs (Stable)</span></td>
-                <td class="py-3.5 px-3 text-august-warmGray">No SOB • Normal appetite • No swelling</td>
+                <td class="py-3.5 px-3 text-august-warmGray">
+                  <div>No SOB • Normal appetite • No swelling</div>
+                  <span class="inline-block mt-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-800 font-semibold text-[10px]">BP 122/76 • HR 68 • SpO₂ 98%</span>
+                </td>
                 <td class="py-3.5 px-3">Torsemide 20 mg</td>
                 <td class="py-3.5 px-4 text-right text-august-warmGray">Routine monitoring</td>
               </tr>
@@ -194,6 +206,7 @@ export class PrescriberEhrComponent {
   private readonly router = inject(Router);
   readonly metrics = this.care.clinicalMetrics;
   readonly adherence = this.care.adherenceSummary;
+  readonly vitals = this.care.vitalsStatus;
 
   noteDraft = '';
 
@@ -204,7 +217,7 @@ export class PrescriberEhrComponent {
 
   readonly hasSymFlag = computed(() => {
     const s = this.care.todaySymptoms();
-    return s.shortnessOfBreath !== 'none' || s.hasSwelling || this.metrics().isConcerning;
+    return s.shortnessOfBreath !== 'none' || s.hasSwelling || this.metrics().isConcerning || this.vitals().isConcerning;
   });
 
   inspectPatient(route: string): void {

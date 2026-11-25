@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { BreathStatus } from '../../models/care.models';
+import { BreathStatus, VitalSigns } from '../../models/care.models';
 import { CareStateService } from '../../services/care-state.service';
 import { CustomIconComponent, CustomIconName } from '../custom-icon/custom-icon.component';
 
@@ -24,7 +24,7 @@ interface BodyRegionOption {
                   <app-icon name="mattressScale" iconClass="w-3.5 h-3.5" />
                   <span>Morning Health Check</span>
                 </span>
-                <span class="text-xs font-semibold text-august-warmGray">3 quick questions</span>
+                <span class="text-xs font-semibold text-august-warmGray">3 questions + Vitals</span>
               </div>
               <h2 class="text-2xl font-serif text-august-dark font-medium">How are you feeling today?</h2>
             </div>
@@ -146,6 +146,94 @@ interface BodyRegionOption {
           }
         </div>
 
+        <!-- Question 4: Morning Vitals (BP, Heart Rate & SpO2) -->
+        <div class="bg-august-ivory p-4 rounded-2xl border border-august-border space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center">
+                <app-icon name="stethoscope" iconClass="w-5 h-5" />
+              </div>
+              <div>
+                <label class="text-xs sm:text-sm font-bold text-august-dark block">4. Morning Vitals (BP, Heart Rate &amp; SpO₂)</label>
+                <span class="text-[11px] text-august-warmGray">Optional — enter manually or sync cuff/pulse oximeter</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button
+                type="button"
+                (click)="syncBluetoothVitals()"
+                class="px-2.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-[11px] font-bold flex items-center gap-1 transition"
+              >
+                <app-icon name="sync" iconClass="w-3.5 h-3.5" />
+                <span>Sync Cuff &amp; SpO₂</span>
+              </button>
+              <button
+                type="button"
+                (click)="includeVitals.set(!includeVitals())"
+                class="px-2.5 py-1.5 rounded-xl bg-white border border-august-border text-[11px] font-semibold text-august-warmGray hover:text-august-dark transition"
+              >
+                {{ includeVitals() ? 'Skip' : 'Add Vitals' }}
+              </button>
+            </div>
+          </div>
+
+          @if (includeVitals()) {
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div class="bg-white p-2.5 rounded-xl border border-august-border">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-august-warmGray block">Systolic (mmHg)</label>
+                <input
+                  [(ngModel)]="systolicBp"
+                  type="number"
+                  min="60"
+                  max="250"
+                  class="w-full mt-1 text-sm font-bold text-august-dark focus:outline-none"
+                />
+              </div>
+              <div class="bg-white p-2.5 rounded-xl border border-august-border">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-august-warmGray block">Diastolic (mmHg)</label>
+                <input
+                  [(ngModel)]="diastolicBp"
+                  type="number"
+                  min="35"
+                  max="150"
+                  class="w-full mt-1 text-sm font-bold text-august-dark focus:outline-none"
+                />
+              </div>
+              <div class="bg-white p-2.5 rounded-xl border border-august-border">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-august-warmGray block">Heart Rate (bpm)</label>
+                <input
+                  [(ngModel)]="heartRate"
+                  type="number"
+                  min="30"
+                  max="200"
+                  class="w-full mt-1 text-sm font-bold text-august-dark focus:outline-none"
+                />
+              </div>
+              <div class="bg-white p-2.5 rounded-xl border border-august-border">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-august-warmGray block">SpO₂ (%)</label>
+                <input
+                  [(ngModel)]="spo2"
+                  type="number"
+                  min="70"
+                  max="100"
+                  class="w-full mt-1 text-sm font-bold text-august-dark focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-august-warmGray">
+                Source: <b class="text-august-dark">{{ vitalsSource() === 'bluetooth' ? 'Bluetooth Cuff + Pulse Ox' : 'Manual Entry' }}</b>
+              </span>
+              @if (previewVitalAlert()) {
+                <span class="font-bold text-red-700">{{ previewVitalAlert() }}</span>
+              } @else {
+                <span class="font-semibold text-emerald-700">Within target range</span>
+              }
+            </div>
+          }
+        </div>
+
         <button
           type="button"
           (click)="submit()"
@@ -180,6 +268,40 @@ export class SymptomGateComponent {
   readonly selectedLocations = signal<string[]>([...this.care.todaySymptoms().swellingLocations]);
   swellingOther = this.care.todaySymptoms().swellingOther;
 
+  readonly includeVitals = signal<boolean>(true);
+  readonly vitalsSource = signal<'manual' | 'bluetooth'>(this.care.todaySymptoms().vitals?.source ?? 'bluetooth');
+  systolicBp: number | null = this.care.todaySymptoms().vitals?.systolicBp ?? 118;
+  diastolicBp: number | null = this.care.todaySymptoms().vitals?.diastolicBp ?? 74;
+  heartRate: number | null = this.care.todaySymptoms().vitals?.heartRate ?? 72;
+  spo2: number | null = this.care.todaySymptoms().vitals?.spo2 ?? 97;
+
+  previewVitalAlert(): string | null {
+    const reasons: string[] = [];
+    if (this.systolicBp != null && this.diastolicBp != null && (this.systolicBp < 95 || this.diastolicBp < 60)) {
+      reasons.push('Low BP (<95/60)');
+    }
+    if (this.systolicBp != null && this.diastolicBp != null && (this.systolicBp >= 160 || this.diastolicBp >= 100)) {
+      reasons.push('High BP (>=160/100)');
+    }
+    if (this.spo2 != null && this.spo2 < 92) {
+      reasons.push(`Low SpO₂ (${this.spo2}%)`);
+    }
+    if (this.heartRate != null && (this.heartRate < 50 || this.heartRate > 110)) {
+      reasons.push(`HR ${this.heartRate} bpm`);
+    }
+    return reasons.length ? `Alert: ${reasons.join(' • ')}` : null;
+  }
+
+  syncBluetoothVitals(): void {
+    this.includeVitals.set(true);
+    this.vitalsSource.set('bluetooth');
+    this.systolicBp = 118;
+    this.diastolicBp = 74;
+    this.heartRate = 72;
+    this.spo2 = 97;
+    this.care.showToast('Synced morning cuff (118/74 mmHg, HR 72) & pulse ox (SpO₂ 97%).', 'success');
+  }
+
   setSwelling(val: boolean): void {
     this.hasSwelling.set(val);
     if (!val) {
@@ -200,12 +322,23 @@ export class SymptomGateComponent {
       return;
     }
 
+    const vitals: VitalSigns | undefined = this.includeVitals()
+      ? {
+          systolicBp: this.systolicBp !== null ? Number(this.systolicBp) : null,
+          diastolicBp: this.diastolicBp !== null ? Number(this.diastolicBp) : null,
+          heartRate: this.heartRate !== null ? Number(this.heartRate) : null,
+          spo2: this.spo2 !== null ? Number(this.spo2) : null,
+          source: this.vitalsSource()
+        }
+      : undefined;
+
     this.care.submitSymptoms({
       shortnessOfBreath: this.shortnessOfBreath(),
       poorAppetite: this.poorAppetite(),
       hasSwelling: this.hasSwelling(),
       swellingLocations: this.selectedLocations(),
       swellingOther: this.swellingOther.trim(),
+      vitals,
       submittedAt: null
     });
   }

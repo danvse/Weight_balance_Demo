@@ -78,23 +78,32 @@ describe('August Care Angular RPM App', () => {
   it('should play the mascot loader for 2 seconds when switching tabs', async () => {
     vi.useFakeTimers();
     try {
+      const fixture = TestBed.createComponent(App);
       const care = TestBed.inject(CareStateService);
       const router = TestBed.inject(Router);
       care.login('patient');
+      fixture.detectChanges();
 
       await router.navigateByUrl('/home');
+      fixture.detectChanges();
       expect(care.isTabLoading()).toBe(false);
 
       const navPromise = router.navigateByUrl('/chat');
       await vi.advanceTimersByTimeAsync(100);
+      fixture.detectChanges();
+
       expect(care.isTabLoading()).toBe(true);
       expect(router.url).toBe('/home');
+      const loaderVideo = fixture.nativeElement.querySelector('app-mascot-loader video') as HTMLVideoElement | null;
+      expect(loaderVideo?.getAttribute('src')).toBe('mascot-loader.mp4');
 
       await vi.advanceTimersByTimeAsync(1900);
       await navPromise;
+      fixture.detectChanges();
 
       expect(care.isTabLoading()).toBe(false);
       expect(router.url).toBe('/chat');
+      expect(fixture.nativeElement.querySelector('app-mascot-loader')).toBeNull();
     } finally {
       vi.useRealTimers();
     }

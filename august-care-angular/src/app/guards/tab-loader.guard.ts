@@ -15,10 +15,11 @@ export const tabLoaderGuard: CanActivateFn = route => {
   const router = inject(Router);
   const path = route.routeConfig?.path ?? '';
 
-  if (!care.hasActivatedInitialPage || router.url === '/login' || router.url === '/') {
+  if (!care.hasActivatedInitialPage && router.url === '/') {
     care.hasActivatedInitialPage = true;
     return true;
   }
+  care.hasActivatedInitialPage = true;
 
   if (router.url === `/${path}`) {
     return true;

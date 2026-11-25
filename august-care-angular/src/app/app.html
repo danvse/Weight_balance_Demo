@@ -14,6 +14,11 @@
   }
 </div>
 
+<!-- 2-Second Mascot Running Tab Transition Loader -->
+@if (care.isTabLoading()) {
+  <app-mascot-loader />
+}
+
 @if (!care.isAuthenticated()) {
   <router-outlet />
 } @else {
@@ -115,11 +120,6 @@
     <!-- Mandatory Symptom Gate (before patient accesses dashboard) -->
     @if (care.userRole() === 'patient' && !care.symptomGateCompleted()) {
       <app-symptom-gate />
-    }
-
-    <!-- 2-Second Mascot Running Tab Transition Loader -->
-    @if (care.isTabLoading()) {
-      <app-mascot-loader />
     }
 
     <!-- Main Workspace -->

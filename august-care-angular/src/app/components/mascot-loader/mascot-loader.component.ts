@@ -6,23 +6,24 @@ import { CareStateService } from '../../services/care-state.service';
   standalone: true,
   template: `
     <div
-      class="fixed inset-0 z-[70] bg-[#F8F7F2]/80 backdrop-blur-sm flex items-center justify-center p-4"
+      style="position: fixed; inset: 0; z-index: 9999; background-color: rgba(248, 247, 242, 0.88); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+      class="flex items-center justify-center p-4"
       role="status"
       aria-live="polite"
     >
       <div class="bg-white rounded-3xl shadow-2xl border border-august-border p-6 sm:p-8 max-w-sm w-full text-center space-y-4 animate-slide-up">
-        <div class="w-56 h-40 mx-auto rounded-2xl overflow-hidden bg-white flex items-center justify-center">
+        <div class="w-56 h-40 mx-auto rounded-2xl overflow-hidden bg-white flex items-center justify-center relative">
           <video
             #loaderVideo
+            src="mascot-loader.mp4"
+            poster="mascot.jpg"
             autoplay
             loop
             muted
             playsinline
             preload="auto"
             class="w-full h-full object-contain mix-blend-multiply"
-          >
-            <source src="mascot-loader.mp4" type="video/mp4" />
-          </video>
+          ></video>
         </div>
 
         <div class="space-y-1">
@@ -30,7 +31,7 @@ import { CareStateService } from '../../services/care-state.service';
           <p class="text-base font-serif font-medium text-august-dark">{{ care.tabLoadingLabel() }}</p>
         </div>
 
-        <div class="w-full h-1.5 bg-august-ivory rounded-full overflow-hidden border border-august-border/60">
+        <div class="w-full h-2 bg-august-ivory rounded-full overflow-hidden border border-august-border/60">
           <div class="h-full bg-august-forest rounded-full animate-loader-bar"></div>
         </div>
       </div>
@@ -46,7 +47,7 @@ export class MascotLoaderComponent implements AfterViewInit {
     if (!video) return;
     video.muted = true;
     video.defaultMuted = true;
-    video.currentTime = 0;
+    if (typeof video.load === 'function') video.load();
     try {
       const p = video.play();
       if (p && typeof p.catch === 'function') {

@@ -174,6 +174,9 @@ export class CareStateService {
   readonly unreadChatCount = signal<number>(this.initial.unreadChatCount);
   readonly isDoctorTyping = signal<boolean>(false);
   readonly toasts = signal<ToastItem[]>([]);
+  readonly isTabLoading = signal<boolean>(false);
+  readonly tabLoadingLabel = signal<string>('Fetching your care page...');
+  hasActivatedInitialPage = false;
 
   readonly clinicalMetrics = computed<ClinicalMetrics>(() => {
     const history = this.weightHistory();
@@ -360,6 +363,8 @@ export class CareStateService {
 
   signOut(): void {
     this.isAuthenticated.set(false);
+    this.hasActivatedInitialPage = false;
+    this.isTabLoading.set(false);
     this.showToast('Signed out securely.', 'info');
   }
 

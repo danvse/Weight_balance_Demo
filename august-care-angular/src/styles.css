@@ -93,6 +93,15 @@ input:focus, select:focus, textarea:focus {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 }
 
+@keyframes loaderFill {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+.animate-loader-bar {
+  animation: loaderFill 2s linear forwards;
+}
+
 @media (max-width: 767px) {
   .has-mobile-nav {
     padding-bottom: 5.5rem;

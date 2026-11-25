@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
+import { vi } from 'vitest';
 import { App } from './app';
 import { routes } from './app.routes';
 import { CareStateService } from './services/care-state.service';
@@ -72,5 +73,30 @@ describe('August Care Angular RPM App', () => {
     });
     expect(care.userRole()).toBe('prescriber');
     expect(care.patient().prescriberName).toBe('Dr. Marcus Lee, MD');
+  });
+
+  it('should play the mascot loader for 2 seconds when switching tabs', async () => {
+    vi.useFakeTimers();
+    try {
+      const care = TestBed.inject(CareStateService);
+      const router = TestBed.inject(Router);
+      care.login('patient');
+
+      await router.navigateByUrl('/home');
+      expect(care.isTabLoading()).toBe(false);
+
+      const navPromise = router.navigateByUrl('/chat');
+      await vi.advanceTimersByTimeAsync(100);
+      expect(care.isTabLoading()).toBe(true);
+      expect(router.url).toBe('/home');
+
+      await vi.advanceTimersByTimeAsync(1900);
+      await navPromise;
+
+      expect(care.isTabLoading()).toBe(false);
+      expect(router.url).toBe('/chat');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -142,8 +142,9 @@ export class PrescriberEhrComponent {
   });
 
   inspectPatient(route: string): void {
-    this.care.switchRole('patient');
-    this.router.navigateByUrl(route);
+    this.router.navigateByUrl(route).then(ok => {
+      if (ok) this.care.switchRole('patient');
+    });
   }
 
   publishNote(): void {

@@ -10,10 +10,10 @@ import { CustomIconComponent } from '../custom-icon/custom-icon.component';
   template: `
     <div class="space-y-6">
       <form (ngSubmit)="saveProfile()" class="space-y-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 sm:p-6 rounded-3xl border border-august-border shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/95 backdrop-blur-md p-5 sm:p-6 rounded-3xl border border-august-border shadow-sm">
           <div>
-            <h2 class="text-2xl font-serif text-august-dark font-medium">Patient Profile &amp; Medications</h2>
-            <p class="text-xs text-august-warmGray">Edit your personal details, baseline dry weight, last prescriber visit, and diuretics.</p>
+            <h2 class="text-2xl font-serif text-august-dark font-medium">Patient Profile &amp; Health Goals</h2>
+            <p class="text-xs text-august-warmGray">Edit your age, height (for BMI), weight loss goal, baseline dry weight, and diuretics.</p>
           </div>
           <button
             type="submit"
@@ -25,37 +25,70 @@ import { CustomIconComponent } from '../custom-icon/custom-icon.component';
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Basic Info -->
-          <div class="bg-white rounded-3xl p-6 border border-august-border shadow-sm space-y-4">
-            <div class="flex items-center gap-2.5 pb-2 border-b border-august-border">
-              <app-icon name="profile" iconClass="w-5 h-5 text-august-forest" />
-              <h3 class="text-sm font-bold text-august-dark uppercase tracking-wider">Basic Information</h3>
+          <!-- Basic Info + Height + Live BMI Preview -->
+          <div class="bg-white/95 backdrop-blur-md rounded-3xl p-6 border border-august-border shadow-sm space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-august-border">
+              <div class="flex items-center gap-2.5">
+                <app-icon name="profile" iconClass="w-5 h-5 text-august-forest" />
+                <h3 class="text-sm font-bold text-august-dark uppercase tracking-wider">Demographics &amp; Height</h3>
+              </div>
+              <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-bold">
+                BMI {{ care.bmiInfo().score.toFixed(1) }} ({{ care.bmiInfo().category }})
+              </span>
             </div>
+
             <div class="space-y-3 text-xs">
               <div>
                 <label class="block text-august-warmGray font-bold mb-1">Patient Name</label>
                 <input [(ngModel)]="name" name="profName" type="text" required class="w-full bg-august-ivory border border-august-border rounded-xl px-4 py-2.5 text-sm text-august-dark font-medium" />
               </div>
-              <div>
-                <label class="block text-august-warmGray font-bold mb-1">Date of Birth / Reference Date</label>
-                <input [(ngModel)]="dob" name="profDob" type="date" required class="w-full bg-august-ivory border border-august-border rounded-xl px-4 py-2.5 text-sm text-august-dark font-medium" />
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-august-warmGray font-bold mb-1">Date of Birth (Age {{ care.bmiInfo().ageYears }})</label>
+                  <input [(ngModel)]="dob" name="profDob" type="date" required class="w-full bg-august-ivory border border-august-border rounded-xl px-4 py-2.5 text-sm text-august-dark font-medium" />
+                </div>
+                <div>
+                  <label class="block text-august-warmGray font-bold mb-1">Height (Feet / Inches)</label>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="relative">
+                      <input [(ngModel)]="heightFeet" name="profFeet" type="number" min="3" max="7" required class="w-full bg-august-ivory border border-august-border rounded-xl px-3 py-2.5 text-sm text-august-dark font-bold" />
+                      <span class="absolute right-2.5 top-2.5 text-[11px] text-august-warmGray font-bold">ft</span>
+                    </div>
+                    <div class="relative">
+                      <input [(ngModel)]="heightRemainderInches" name="profIn" type="number" min="0" max="11" required class="w-full bg-august-ivory border border-august-border rounded-xl px-3 py-2.5 text-sm text-august-dark font-bold" />
+                      <span class="absolute right-2.5 top-2.5 text-[11px] text-august-warmGray font-bold">in</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Baseline & Last Visit -->
-          <div class="bg-white rounded-3xl p-6 border border-august-border shadow-sm space-y-4">
+          <!-- Weight Goals, Baseline & Last Visit -->
+          <div class="bg-white/95 backdrop-blur-md rounded-3xl p-6 border border-august-border shadow-sm space-y-4">
             <div class="flex items-center gap-2.5 pb-2 border-b border-august-border">
               <app-icon name="calendarVisit" iconClass="w-5 h-5 text-august-forest" />
-              <h3 class="text-sm font-bold text-august-dark uppercase tracking-wider">Baseline &amp; Prescriber Visit</h3>
+              <h3 class="text-sm font-bold text-august-dark uppercase tracking-wider">Weight Goal, Baseline &amp; Visit</h3>
             </div>
-            <div class="space-y-3 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
-                <label class="block text-august-warmGray font-bold mb-1">Baseline Weight (lbs)</label>
-                <input [(ngModel)]="baselineWeight" name="profBase" type="number" step="0.1" required class="w-full bg-august-ivory border border-august-border rounded-xl px-4 py-2.5 text-base text-august-dark font-bold" />
-                <span class="text-[11px] text-august-warmGray block mt-1">Gains &gt;2.0 lbs above baseline trigger the red alert dashboard.</span>
+                <label class="block text-august-warmGray font-bold mb-1">Starting Weight (lbs)</label>
+                <input [(ngModel)]="startWeightLbs" name="profStart" type="number" step="0.1" required class="w-full bg-august-ivory border border-august-border rounded-xl px-4 py-2.5 text-sm text-august-dark font-bold" />
               </div>
               <div>
+                <label class="block text-august-warmGray font-bold mb-1">Target Goal Weight (lbs)</label>
+                <input [(ngModel)]="goalWeightLbs" name="profGoal" type="number" step="0.1" required class="w-full bg-august-ivory border border-august-border rounded-xl px-4 py-2.5 text-sm text-indigo-700 font-bold" />
+              </div>
+              <div>
+                <label class="block text-august-warmGray font-bold mb-1">Dry Baseline Weight (lbs)</label>
+                <input [(ngModel)]="baselineWeight" name="profBase" type="number" step="0.1" required class="w-full bg-august-ivory border border-august-border rounded-xl px-4 py-2.5 text-sm text-august-dark font-bold" />
+              </div>
+              <div>
+                <label class="block text-august-warmGray font-bold mb-1">Daily Fluid Limit (oz)</label>
+                <input [(ngModel)]="fluidLimitOz" name="profFluid" type="number" min="16" max="128" required class="w-full bg-august-ivory border border-august-border rounded-xl px-4 py-2.5 text-sm text-august-dark font-bold" />
+              </div>
+              <div class="sm:col-span-2">
                 <label class="block text-august-warmGray font-bold mb-1">Last Visit to Prescriber</label>
                 <input [(ngModel)]="lastVisitDate" name="profVisit" type="date" required class="w-full bg-august-ivory border border-august-border rounded-xl px-4 py-2.5 text-sm text-august-dark font-medium" />
               </div>
@@ -65,7 +98,7 @@ import { CustomIconComponent } from '../custom-icon/custom-icon.component';
       </form>
 
       <!-- Diuretics & Medications Card -->
-      <div class="bg-white rounded-3xl p-6 border border-august-border shadow-sm space-y-4">
+      <div class="bg-white/95 backdrop-blur-md rounded-3xl p-6 border border-august-border shadow-sm space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-august-border">
           <div class="flex items-center gap-2.5">
             <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center">
@@ -153,7 +186,12 @@ export class PatientProfileComponent {
 
   name = this.care.patient().name;
   dob = this.care.patient().dob;
+  heightFeet = Math.floor(this.care.patient().heightInches / 12);
+  heightRemainderInches = this.care.patient().heightInches % 12;
+  startWeightLbs = this.care.patient().startWeightLbs;
+  goalWeightLbs = this.care.patient().goalWeightLbs;
   baselineWeight = this.care.patient().baselineWeight;
+  fluidLimitOz = this.care.patient().fluidLimitOz;
   lastVisitDate = this.care.patient().lastVisitDate;
 
   readonly addDrawerOpen = signal(false);
@@ -164,14 +202,23 @@ export class PatientProfileComponent {
 
   saveProfile(): void {
     const base = Number(this.baselineWeight);
-    if (!this.name.trim() || Number.isNaN(base) || base < 50 || base > 500) {
-      this.care.showToast('Please enter a valid name and baseline weight.', 'alert');
+    const start = Number(this.startWeightLbs);
+    const goal = Number(this.goalWeightLbs);
+    const totalInches = Number(this.heightFeet) * 12 + Number(this.heightRemainderInches);
+
+    if (!this.name.trim() || Number.isNaN(base) || base < 50 || base > 500 || totalInches < 48 || totalInches > 96) {
+      this.care.showToast('Please enter a valid name, height, and weights.', 'alert');
       return;
     }
+
     this.care.updateProfile({
       name: this.name.trim(),
       dob: this.dob,
+      heightInches: totalInches,
+      startWeightLbs: Number(start.toFixed(1)),
+      goalWeightLbs: Number(goal.toFixed(1)),
       baselineWeight: Number(base.toFixed(1)),
+      fluidLimitOz: Math.max(16, Math.min(128, Number(this.fluidLimitOz) || 50)),
       lastVisitDate: this.lastVisitDate
     });
   }

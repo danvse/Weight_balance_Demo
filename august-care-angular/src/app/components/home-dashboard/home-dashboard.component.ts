@@ -78,48 +78,180 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
         </div>
       }
 
+      <!-- ============================================== -->
+      <!-- HEALTH & WEIGHT GOAL OVERVIEW (4 Vibrant Tiles + Unit Toggle) -->
+      <!-- ============================================== -->
+      <div class="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-widest text-august-warmGray">Daily Health Overview</span>
+            <h2 class="text-xl sm:text-2xl font-serif font-medium text-august-dark">Weight Balance &amp; Body Metrics</h2>
+          </div>
+
+          <!-- LB / KG Toggle -->
+          <div class="flex items-center gap-2">
+            <div class="bg-august-ivory p-1 rounded-xl border border-august-border flex text-xs font-bold">
+              <button
+                type="button"
+                (click)="care.weightUnit.set('lbs')"
+                [class]="care.weightUnit() === 'lbs'
+                  ? 'px-3 py-1 rounded-lg bg-indigo-600 text-white shadow-xs transition'
+                  : 'px-3 py-1 rounded-lg text-august-warmGray hover:text-august-dark transition'"
+              >
+                LB
+              </button>
+              <button
+                type="button"
+                (click)="care.weightUnit.set('kg')"
+                [class]="care.weightUnit() === 'kg'
+                  ? 'px-3 py-1 rounded-lg bg-indigo-600 text-white shadow-xs transition'
+                  : 'px-3 py-1 rounded-lg text-august-warmGray hover:text-august-dark transition'"
+              >
+                KG
+              </button>
+            </div>
+            <a routerLink="/profile" class="text-xs font-bold text-august-forest hover:underline px-2">Edit Height &amp; Goal</a>
+          </div>
+        </div>
+
+        <!-- 4 Vibrant Summary Tiles (Inspired by Health Dashboard UI) -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <!-- Tile 1: Current Weight -->
+          <div class="rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-md relative overflow-hidden">
+            <div class="text-[11px] font-semibold text-orange-100 uppercase tracking-wider">Current Weight</div>
+            <div class="flex items-baseline gap-1 pt-1.5">
+              <span class="text-3xl font-bold tracking-tight">{{ care.convertWeight(metrics().latestWeight).toFixed(1) }}</span>
+              <span class="text-xs font-semibold text-orange-100">{{ care.weightUnit() }}</span>
+            </div>
+            <div class="text-[11px] text-orange-100 mt-2 font-medium">
+              {{ formatUnitDelta(metrics().overnightDelta) }} since yesterday
+            </div>
+          </div>
+
+          <!-- Tile 2: Weight Loss Goal -->
+          <div class="rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-md relative overflow-hidden">
+            <div class="text-[11px] font-semibold text-indigo-100 uppercase tracking-wider">Goal Weight</div>
+            <div class="flex items-baseline gap-1 pt-1.5">
+              <span class="text-3xl font-bold tracking-tight">{{ care.convertWeight(goal().goalWeight).toFixed(1) }}</span>
+              <span class="text-xs font-semibold text-indigo-100">{{ care.weightUnit() }}</span>
+            </div>
+            <div class="text-[11px] text-indigo-100 mt-2 font-medium">
+              {{ care.convertWeight(goal().leftLbs).toFixed(1) }} {{ care.weightUnit() }} left to goal
+            </div>
+          </div>
+
+          <!-- Tile 3: Dynamic BMI (Age + Height + Weight) -->
+          <div class="rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-amber-400 to-amber-500 text-white shadow-md relative overflow-hidden">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-semibold text-amber-50 uppercase tracking-wider">Body Mass Index</span>
+              <span class="px-2 py-0.5 rounded-full bg-white/25 text-white text-[10px] font-bold">{{ bmi().category }}</span>
+            </div>
+            <div class="flex items-baseline gap-1.5 pt-1.5">
+              <span class="text-3xl font-bold tracking-tight">{{ bmi().score.toFixed(1) }}</span>
+              <span class="text-xs font-semibold text-amber-50">BMI</span>
+            </div>
+            <div class="text-[11px] text-amber-50 mt-2 font-medium">
+              Age {{ bmi().ageYears }} • {{ bmi().heightDisplay }}
+            </div>
+            <!-- Mini decorative bar texture -->
+            <svg viewBox="0 0 100 22" class="w-full h-5 mt-1 opacity-35" aria-hidden="true">
+              <rect x="4" y="10" width="7" height="12" rx="2" fill="white" />
+              <rect x="15" y="6" width="7" height="16" rx="2" fill="white" />
+              <rect x="26" y="12" width="7" height="10" rx="2" fill="white" />
+              <rect x="37" y="3" width="7" height="19" rx="2" fill="white" />
+              <rect x="48" y="8" width="7" height="14" rx="2" fill="white" />
+              <rect x="59" y="1" width="7" height="21" rx="2" fill="white" />
+              <rect x="70" y="9" width="7" height="13" rx="2" fill="white" />
+              <rect x="81" y="5" width="7" height="17" rx="2" fill="white" />
+            </svg>
+          </div>
+
+          <!-- Tile 4: Nocturnal Sleep & Sync -->
+          <div class="rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-sky-400 to-cyan-500 text-white shadow-md relative overflow-hidden">
+            <div class="text-[11px] font-semibold text-sky-50 uppercase tracking-wider">Nocturnal Rest</div>
+            <div class="flex items-baseline gap-1 pt-1.5">
+              <span class="text-3xl font-bold tracking-tight">{{ care.patient().sleepHours }}</span>
+              <span class="text-xs font-semibold text-sky-50">hr</span>
+            </div>
+            <div class="text-[11px] text-sky-50 mt-2 font-medium">
+              Scale synced {{ metrics().syncTime }}
+            </div>
+            <svg viewBox="0 0 100 22" class="w-full h-5 mt-1 opacity-55" aria-hidden="true">
+              <polyline fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="2,16 18,11 32,14 48,6 64,12 80,8 96,13" />
+              <circle cx="48" cy="6" r="3" fill="white" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
       <!-- Two-Column Dashboard Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <!-- Left Column (7 cols): Daily Weight Stats + Screen Time Trend + Block 1 (Weight Table) -->
+        <!-- Left Column (7 cols): Weight Trend Chart, Trends Strip, & Block 1 (Weight Table) -->
         <div class="lg:col-span-7 space-y-6">
-          <!-- Hero Weight Stats & Chart -->
+          <!-- Hero Weight Stats & Screen-Time Chart -->
           <div
             [class]="metrics().isConcerning
-              ? 'bg-white rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-5 transition-all alert-card-highlight'
-              : 'bg-white rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-5 transition-all'"
+              ? 'bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-5 transition-all alert-card-highlight'
+              : 'bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-5 transition-all'"
           >
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-august-warmGray">
                   <app-icon name="mattressScale" iconClass="w-4 h-4 text-august-forest" />
-                  <span>Daily Mattress Weight</span>
+                  <span>Daily Mattress Weight Trend</span>
                 </div>
                 <div class="flex flex-wrap items-baseline gap-2.5 pt-1">
-                  <span class="text-4xl sm:text-5xl font-serif font-bold text-august-dark">{{ metrics().latestWeight.toFixed(1) }}</span>
-                  <span class="text-lg font-bold text-august-warmGray">lbs</span>
+                  <span class="text-4xl sm:text-5xl font-serif font-bold text-august-dark">{{ care.convertWeight(metrics().latestWeight).toFixed(1) }}</span>
+                  <span class="text-lg font-bold text-august-warmGray">{{ care.weightUnit() }}</span>
                   <span
                     [class]="metrics().isConcerning
                       ? 'text-xs px-3 py-1 rounded-full font-bold bg-red-100 text-red-700 flex items-center gap-1.5 border border-red-200'
                       : 'text-xs px-3 py-1 rounded-full font-bold bg-august-sage text-august-forest flex items-center gap-1.5 border border-emerald-200'"
                   >
                     <app-icon name="trendUp" iconClass="w-3.5 h-3.5" />
-                    <span>{{ care.formatDelta(metrics().overnightDelta) }} overnight • {{ metrics().isConcerning ? 'Concerning (>2 lbs)' : 'Stable' }}</span>
+                    <span>{{ formatUnitDelta(metrics().overnightDelta) }} overnight • {{ metrics().isConcerning ? 'Concerning (>2 lbs)' : 'Stable' }}</span>
                   </span>
                 </div>
                 <span class="text-[11px] text-august-warmGray block mt-1">Mattress sync: Today {{ metrics().syncTime }}</span>
               </div>
 
               <div class="bg-august-ivory p-3.5 rounded-2xl border border-august-border sm:text-right">
-                <span class="text-[10px] text-august-warmGray block uppercase font-bold tracking-wider">Baseline Weight</span>
-                <span class="text-xl font-serif font-bold text-august-dark">{{ metrics().baseline.toFixed(1) }} lbs</span>
+                <span class="text-[10px] text-august-warmGray block uppercase font-bold tracking-wider">Dry Baseline</span>
+                <span class="text-xl font-serif font-bold text-august-dark">{{ care.formatWeight(metrics().baseline) }}</span>
               </div>
             </div>
 
             <app-weight-trend-chart />
+
+            <!-- 4-Card Trends Strip (Last 7 Days, Last 30 Days, All Time, Median) -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
+              <div class="p-3 rounded-2xl bg-august-ivory border border-august-border">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-august-warmGray block">Last 7 Days</span>
+                <span [class]="trends().last7Days <= 0 ? 'text-base font-bold text-emerald-700' : 'text-base font-bold text-august-dark'">
+                  {{ formatUnitDelta(trends().last7Days) }}
+                </span>
+              </div>
+              <div class="p-3 rounded-2xl bg-august-ivory border border-august-border">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-august-warmGray block">Last 30 Days</span>
+                <span [class]="trends().last30Days <= 0 ? 'text-base font-bold text-emerald-700' : 'text-base font-bold text-august-dark'">
+                  {{ formatUnitDelta(trends().last30Days) }}
+                </span>
+              </div>
+              <div class="p-3 rounded-2xl bg-august-ivory border border-august-border">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-august-warmGray block">Since Start</span>
+                <span [class]="trends().allTime <= 0 ? 'text-base font-bold text-emerald-700' : 'text-base font-bold text-august-dark'">
+                  {{ formatUnitDelta(trends().allTime) }}
+                </span>
+              </div>
+              <div class="p-3 rounded-2xl bg-august-ivory border border-august-border">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-august-warmGray block">Median Weight</span>
+                <span class="text-base font-bold text-august-dark">{{ care.formatWeight(trends().medianWeight) }}</span>
+              </div>
+            </div>
           </div>
 
           <!-- BLOCK 1: Table with Weight Changes & Morning Symptoms Over the Past Few Days -->
-          <div class="bg-white rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-4">
+          <div class="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-4">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-xl bg-august-sage text-august-forest flex items-center justify-center">
@@ -151,9 +283,9 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
                         <div class="font-bold text-august-dark text-xs sm:text-sm">{{ row.dateLabel }}</div>
                         <div class="text-[10px] text-august-warmGray">{{ row.syncTime }}</div>
                       </td>
-                      <td class="py-3 px-3 font-serif font-bold text-base text-august-dark whitespace-nowrap">{{ row.weight.toFixed(1) }} lbs</td>
+                      <td class="py-3 px-3 font-serif font-bold text-base text-august-dark whitespace-nowrap">{{ care.formatWeight(row.weight) }}</td>
                       <td [class]="row.isConcerning ? 'py-3 px-3 font-bold text-xs sm:text-sm text-red-700 whitespace-nowrap' : 'py-3 px-3 font-bold text-xs sm:text-sm text-august-dark whitespace-nowrap'">
-                        {{ care.formatDelta(row.delta) }}
+                        {{ formatUnitDelta(row.delta) }}
                       </td>
                       <td class="py-3 px-3">
                         <div class="flex flex-wrap gap-1">
@@ -195,10 +327,116 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
           </div>
         </div>
 
-        <!-- Right Column (5 cols): 7-Day Morning Check-In Card, Block 2 (Prescriber Updates), Block 3 (Last Visit), Diuretics -->
+        <!-- Right Column (5 cols): Weight Loss Goal Gauge, Statistics 2x2, 7-Day Check-In, Block 2 & Block 3 -->
         <div class="lg:col-span-5 space-y-6">
+          <!-- Weight Loss Goal Semi-Circular Gauge Card -->
+          <div class="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-base font-bold text-august-dark">Weight Goal Progress</h3>
+                <p class="text-xs text-august-warmGray">
+                  Started at {{ care.formatWeight(goal().startWeight) }} • Target {{ care.formatWeight(goal().goalWeight) }}
+                </p>
+              </div>
+              <span class="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold">{{ goal().percent }}%</span>
+            </div>
+
+            <!-- Semi-Circular SVG Gauge -->
+            <div class="flex flex-col items-center pt-1">
+              <div class="relative w-56 h-32 flex items-end justify-center">
+                <svg viewBox="0 0 180 105" class="w-full h-full overflow-visible" aria-hidden="true">
+                  <!-- Background Arc -->
+                  <path
+                    d="M 20 90 A 70 70 0 0 1 160 90"
+                    fill="none"
+                    stroke="#ECE9DF"
+                    stroke-width="14"
+                    stroke-linecap="round"
+                  />
+                  <!-- Active Progress Arc (total length ~220) -->
+                  <path
+                    d="M 20 90 A 70 70 0 0 1 160 90"
+                    fill="none"
+                    [attr.stroke]="metrics().isConcerning ? '#E11D48' : '#5B4CE6'"
+                    stroke-width="14"
+                    stroke-linecap="round"
+                    stroke-dasharray="220"
+                    [attr.stroke-dashoffset]="goal().arcDashOffset"
+                    class="transition-all duration-500"
+                  />
+                </svg>
+                <div class="absolute bottom-2 text-center">
+                  <div class="text-3xl font-serif font-bold text-august-dark leading-none">
+                    {{ care.convertWeight(goal().currentWeight).toFixed(1) }}
+                  </div>
+                  <div class="text-[11px] font-semibold text-august-warmGray mt-1">
+                    {{ care.convertWeight(goal().leftLbs).toFixed(1) }} {{ care.weightUnit() }} left to goal
+                  </div>
+                </div>
+              </div>
+
+              <div class="w-full flex justify-between text-[11px] font-bold text-august-warmGray px-4 pt-1">
+                <span>Start: {{ care.formatWeight(goal().startWeight) }}</span>
+                <span>Goal: {{ care.formatWeight(goal().goalWeight) }}</span>
+              </div>
+            </div>
+
+            <div
+              [class]="goal().onTrack
+                ? 'p-3 rounded-2xl bg-cyan-50 border border-cyan-100 text-xs text-cyan-900 font-semibold flex items-center gap-2'
+                : 'p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 font-semibold flex items-center gap-2'"
+            >
+              <app-icon [name]="goal().onTrack ? 'checkSeal' : 'alertSiren'" iconClass="w-4 h-4 shrink-0" />
+              <span>
+                {{ goal().onTrack
+                  ? 'Good work! You have lost ' + care.formatWeight(goal().lostLbs) + ' and are on track.'
+                  : 'Fluid gain alert active—check in with Dr. Miller before adjusting your goal.' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Statistics 2x2 Pastel Mini-Grid (Wake Sync, Sleep, Fluid Intake, Habits) -->
+          <div class="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-3.5">
+            <div class="flex items-center justify-between">
+              <h3 class="text-base font-bold text-august-dark">Daily Health Statistics</h3>
+              <span class="text-[11px] text-august-warmGray font-medium">Habits &amp; Hydration</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-100 space-y-1">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Wake Up Sync</span>
+                <div class="text-lg font-bold text-august-dark">{{ metrics().syncTime }}</div>
+                <span class="text-[11px] text-emerald-800 block">Mattress Alarm</span>
+              </div>
+
+              <div class="p-3.5 rounded-2xl bg-sky-50/90 border border-sky-100 space-y-1">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-sky-700">Sleep Schedule</span>
+                <div class="text-lg font-bold text-august-dark">{{ care.patient().sleepHours }} hr</div>
+                <span class="text-[11px] text-sky-800 block">Restful Nocturnal</span>
+              </div>
+
+              <div class="p-3.5 rounded-2xl bg-indigo-50/90 border border-indigo-100 space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-700">Fluid Intake</span>
+                  <div class="flex gap-1">
+                    <button type="button" (click)="care.adjustFluidIntake(-8)" class="w-5 h-5 rounded-md bg-white border border-indigo-200 text-indigo-700 font-bold text-xs flex items-center justify-center">-</button>
+                    <button type="button" (click)="care.adjustFluidIntake(8)" class="w-5 h-5 rounded-md bg-indigo-600 text-white font-bold text-xs flex items-center justify-center">+</button>
+                  </div>
+                </div>
+                <div class="text-lg font-bold text-august-dark">{{ care.patient().fluidIntakeOz }} / {{ care.patient().fluidLimitOz }} oz</div>
+                <span class="text-[11px] text-indigo-800 block">Tap +/- 8 oz cup</span>
+              </div>
+
+              <div class="p-3.5 rounded-2xl bg-orange-50/90 border border-orange-100 space-y-1">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-orange-700">Med Adherence</span>
+                <div class="text-lg font-bold text-august-dark">{{ takenMedsCount() }} / {{ care.patient().medications.length }} Taken</div>
+                <span class="text-[11px] text-orange-800 block">{{ takenMedsCount() >= 2 ? 'On Track' : 'Needs Check' }}</span>
+              </div>
+            </div>
+          </div>
+
           <!-- 7-Day Morning Health Check Tracker & Edit Card -->
-          <div class="bg-white rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-4">
+          <div class="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-4">
             <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-august-border">
               <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-xl bg-august-sage text-august-forest flex items-center justify-center">
@@ -218,7 +456,6 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
               </button>
             </div>
 
-            <!-- 7-Day Interactive Pill Strip -->
             <div class="grid grid-cols-7 gap-1.5">
               @for (day of sevenDayCheckIns(); track day.id) {
                 <button
@@ -244,13 +481,12 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
               }
             </div>
 
-            <!-- Selected Day Inspection Detail -->
             @if (selectedCheckInDay(); as sel) {
               <div class="p-3.5 rounded-2xl bg-august-ivory border border-august-border text-xs space-y-1.5">
                 <div class="flex items-center justify-between">
                   <span class="font-bold text-august-dark">{{ sel.dateLabel }} ({{ sel.fullDate }})</span>
                   <span class="text-[11px] font-semibold text-august-warmGray">
-                    Weight: <b class="text-august-dark">{{ sel.weight.toFixed(1) }} lbs</b>
+                    Weight: <b class="text-august-dark">{{ care.formatWeight(sel.weight) }}</b>
                     @if (sel.symptoms?.submittedAt) {
                       • Logged {{ sel.symptoms?.submittedAt }}
                     }
@@ -274,7 +510,7 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
           </div>
 
           <!-- BLOCK 2: Updates from the Prescriber -->
-          <div class="bg-white rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-4">
+          <div class="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-4">
             <div class="flex items-center justify-between pb-2.5 border-b border-august-border">
               <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-xl bg-august-sage text-august-forest flex items-center justify-center">
@@ -310,7 +546,7 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
           </div>
 
           <!-- BLOCK 3: Last Visit to Prescriber -->
-          <div class="bg-white rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-4">
+          <div class="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-4">
             <div class="flex items-center justify-between pb-2.5 border-b border-august-border">
               <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center">
@@ -339,7 +575,7 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
           </div>
 
           <!-- Active Diuretics Quick Check -->
-          <div class="bg-white rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-3">
+          <div class="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-3">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2.5 font-bold text-august-dark text-sm">
                 <app-icon name="pillDiuretic" iconClass="w-5 h-5 text-august-forest" />
@@ -386,7 +622,7 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
             <span class="px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold uppercase tracking-wider">Clinical Fluid Alert</span>
             <h3 class="text-2xl font-serif font-medium text-august-dark pt-1">Concerning Weight Change Detected</h3>
             <p class="text-xs text-august-warmGray leading-relaxed">
-              Your mattress scale measured <b class="text-august-dark">{{ metrics().latestWeight.toFixed(1) }} lbs</b> (<b class="text-rose-700">{{ maxDeltaFormatted() }}</b>), which exceeds your 2.0 lb safety limit. Your prescriber has been alerted.
+              Your mattress scale measured <b class="text-august-dark">{{ care.formatWeight(metrics().latestWeight) }}</b> (<b class="text-rose-700">{{ maxDeltaFormatted() }}</b>), which exceeds your 2.0 lb safety limit. Your prescriber has been alerted.
             </p>
           </div>
           <div class="flex flex-col sm:flex-row gap-2.5">
@@ -414,15 +650,22 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
 export class HomeDashboardComponent {
   readonly care = inject(CareStateService);
   readonly metrics = this.care.clinicalMetrics;
+  readonly bmi = this.care.bmiInfo;
+  readonly goal = this.care.goalProgress;
+  readonly trends = this.care.trendStats;
 
   readonly selectedCheckInId = signal<number>(7);
 
   readonly maxDeltaFormatted = computed(() =>
-    this.care.formatDelta(Math.max(this.metrics().overnightDelta, this.metrics().baselineDelta))
+    this.formatUnitDelta(Math.max(this.metrics().overnightDelta, this.metrics().baselineDelta))
   );
 
   readonly diuretics = computed(() =>
     this.care.patient().medications.filter(m => m.isDiuretic)
+  );
+
+  readonly takenMedsCount = computed(() =>
+    this.care.patient().medications.filter(m => m.takenToday).length
   );
 
   readonly recentRows = computed(() => {
@@ -461,4 +704,10 @@ export class HomeDashboardComponent {
     const days = this.sevenDayCheckIns();
     return days.find(d => d.id === this.selectedCheckInId()) ?? days[days.length - 1];
   });
+
+  formatUnitDelta(deltaLbs: number): string {
+    const val = this.care.convertWeight(deltaLbs);
+    const fixed = val.toFixed(1);
+    return `${val > 0 ? '+' : ''}${fixed} ${this.care.weightUnit()}`;
+  }
 }

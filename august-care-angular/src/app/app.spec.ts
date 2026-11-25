@@ -108,4 +108,29 @@ describe('August Care Angular RPM App', () => {
       vi.useRealTimers();
     }
   });
+
+  it('should compute dynamic BMI, weight goal progress, unit conversion, and fluid intake', () => {
+    const care = TestBed.inject(CareStateService);
+
+    const bmi = care.bmiInfo();
+    expect(bmi.score).toBe(24.7);
+    expect(bmi.category).toBe('Healthy');
+    expect(bmi.heightDisplay).toBe(`5' 10"`);
+    expect(bmi.ageYears).toBeGreaterThanOrEqual(67);
+
+    const goal = care.goalProgress();
+    expect(goal.startWeight).toBe(176.0);
+    expect(goal.currentWeight).toBe(172.1);
+    expect(goal.goalWeight).toBe(168.0);
+    expect(goal.percent).toBe(49);
+    expect(goal.onTrack).toBe(true);
+
+    expect(care.weightUnit()).toBe('lbs');
+    care.weightUnit.set('kg');
+    expect(care.convertWeight(172.1)).toBeCloseTo(78.1, 1);
+
+    const startFluid = care.patient().fluidIntakeOz;
+    care.adjustFluidIntake(8);
+    expect(care.patient().fluidIntakeOz).toBe(startFluid + 8);
+  });
 });

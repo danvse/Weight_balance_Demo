@@ -2,6 +2,7 @@ export type UserRole = 'patient' | 'prescriber';
 export type TimeRange = 'days' | 'weeks' | 'months';
 export type BreathStatus = 'none' | 'mild' | 'rest';
 export type SymptomSeverity = 'clear' | 'mild' | 'severe';
+export type WeightUnit = 'lbs' | 'kg';
 
 export interface MedicationItem {
   id: number;
@@ -16,13 +17,37 @@ export interface PatientProfile {
   name: string;
   dob: string;
   email: string;
+  heightInches: number;
   baselineWeight: number;
+  startWeightLbs: number;
+  goalWeightLbs: number;
+  fluidIntakeOz: number;
+  fluidLimitOz: number;
+  sleepHours: number;
   lastVisitDate: string;
   nextVisitDate: string;
   serialNumber: string;
   prescriberName: string;
   prescriberSpecialty: string;
   medications: MedicationItem[];
+}
+
+export interface BmiInfo {
+  score: number;
+  category: 'Underweight' | 'Healthy' | 'Overweight' | 'Obese';
+  ageYears: number;
+  heightDisplay: string;
+}
+
+export interface GoalProgressInfo {
+  startWeight: number;
+  currentWeight: number;
+  goalWeight: number;
+  lostLbs: number;
+  leftLbs: number;
+  percent: number;
+  arcDashOffset: number;
+  onTrack: boolean;
 }
 
 export interface SymptomCheck {

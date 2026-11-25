@@ -1,8 +1,10 @@
 import { Injectable, computed, effect, signal } from '@angular/core';
 import {
+  BmiInfo,
   BreathStatus,
   ChatMessage,
   ClinicalMetrics,
+  GoalProgressInfo,
   MedicationItem,
   PatientProfile,
   PeriodPoint,
@@ -12,10 +14,11 @@ import {
   TimeRange,
   ToastItem,
   UserRole,
-  WeightEntry
+  WeightEntry,
+  WeightUnit
 } from '../models/care.models';
 
-const STORAGE_KEY = 'august_care_angular_rpm_v3';
+const STORAGE_KEY = 'august_care_angular_rpm_v4';
 
 interface PersistedState {
   isAuthenticated: boolean;
@@ -23,6 +26,7 @@ interface PersistedState {
   symptomGateCompleted: boolean;
   alertAcknowledged: boolean;
   currentRange: TimeRange;
+  weightUnit: WeightUnit;
   patient: PatientProfile;
   todaySymptoms: SymptomCheck;
   prescriberUpdate: PrescriberUpdate;
@@ -39,11 +43,18 @@ const DEFAULT_PERSISTED: PersistedState = {
   symptomGateCompleted: false,
   alertAcknowledged: false,
   currentRange: 'days',
+  weightUnit: 'lbs',
   patient: {
     name: 'Robert Davis',
     dob: '1958-04-14',
     email: 'robert.davis@patient.august.health',
+    heightInches: 70,
     baselineWeight: 172.0,
+    startWeightLbs: 176.0,
+    goalWeightLbs: 168.0,
+    fluidIntakeOz: 32,
+    fluidLimitOz: 50,
+    sleepHours: 7.8,
     lastVisitDate: '2026-11-12',
     nextVisitDate: '2026-12-15',
     serialNumber: 'MATT-8492-BLE',
@@ -164,6 +175,7 @@ export class CareStateService {
   readonly symptomGateCompleted = signal<boolean>(this.initial.symptomGateCompleted);
   readonly alertAcknowledged = signal<boolean>(this.initial.alertAcknowledged);
   readonly currentRange = signal<TimeRange>(this.initial.currentRange);
+  readonly weightUnit = signal<WeightUnit>(this.initial.weightUnit ?? 'lbs');
   readonly patient = signal<PatientProfile>(this.initial.patient);
   readonly todaySymptoms = signal<SymptomCheck>(this.initial.todaySymptoms);
   readonly prescriberUpdate = signal<PrescriberUpdate>(this.initial.prescriberUpdate);
@@ -247,6 +259,79 @@ export class CareStateService {
     this.weightHistory().filter(entry => Boolean(entry.symptoms?.submittedAt)).length
   );
 
+  readonly bmiInfo = computed<BmiInfo>(() => {
+    const p = this.patient();
+    const weightLbs = this.clinicalMetrics().latestWeight;
+    const heightIn = Math.max(48, Number(p.heightInches) || 70);
+    const score = Number(((weightLbs * 703) / (heightIn * heightIn)).toFixed(1));
+
+    let category: BmiInfo['category'] = 'Healthy';
+    if (score < 18.5) category = 'Underweight';
+    else if (score < 25.0) category = 'Healthy';
+    else if (score < 30.0) category = 'Overweight';
+    else category = 'Obese';
+
+    const dob = new Date(`${p.dob || '1958-04-14'}T00:00:00`);
+    const ref = new Date('2026-11-25T00:00:00');
+    let ageYears = ref.getFullYear() - dob.getFullYear();
+    const mDiff = ref.getMonth() - dob.getMonth();
+    if (mDiff < 0 || (mDiff === 0 && ref.getDate() < dob.getDate())) {
+      ageYears--;
+    }
+
+    const feet = Math.floor(heightIn / 12);
+    const inches = Math.round(heightIn % 12);
+
+    return {
+      score,
+      category,
+      ageYears: Math.max(1, ageYears),
+      heightDisplay: `${feet}' ${inches}"`
+    };
+  });
+
+  readonly goalProgress = computed<GoalProgressInfo>(() => {
+    const p = this.patient();
+    const currentWeight = this.clinicalMetrics().latestWeight;
+    const startWeight = Number(p.startWeightLbs) || 176.0;
+    const goalWeight = Number(p.goalWeightLbs) || 168.0;
+    const totalToLose = Math.max(0.1, startWeight - goalWeight);
+    const lostLbs = Number((startWeight - currentWeight).toFixed(1));
+    const leftLbs = Number(Math.max(0, currentWeight - goalWeight).toFixed(1));
+    const percent = Math.round(Math.min(100, Math.max(0, (lostLbs / totalToLose) * 100)));
+    const arcLen = 220;
+    const arcDashOffset = Number((arcLen - (arcLen * percent) / 100).toFixed(1));
+
+    return {
+      startWeight,
+      currentWeight,
+      goalWeight,
+      lostLbs,
+      leftLbs,
+      percent,
+      arcDashOffset,
+      onTrack: !this.clinicalMetrics().isConcerning && currentWeight <= startWeight
+    };
+  });
+
+  readonly trendStats = computed(() => {
+    const history = this.weightHistory();
+    const latest = history[0]?.weight ?? this.patient().baselineWeight;
+    const oldest7 = history[history.length - 1]?.weight ?? latest;
+    const earliest30 = this.weeklyHistory()[0]?.weight ?? latest;
+    const sorted = history.map(h => h.weight).sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    const median =
+      sorted.length % 2 !== 0 ? sorted[mid] : Number(((sorted[mid - 1] + sorted[mid]) / 2).toFixed(1));
+
+    return {
+      last7Days: Number((latest - oldest7).toFixed(1)),
+      last30Days: Number((latest - earliest30).toFixed(1)),
+      allTime: Number((latest - this.patient().startWeightLbs).toFixed(1)),
+      medianWeight: median
+    };
+  });
+
   readonly isRedDashboardActive = computed(
     () => this.isAuthenticated() && this.userRole() === 'patient' && this.clinicalMetrics().isConcerning
   );
@@ -259,6 +344,7 @@ export class CareStateService {
         symptomGateCompleted: this.symptomGateCompleted(),
         alertAcknowledged: this.alertAcknowledged(),
         currentRange: this.currentRange(),
+        weightUnit: this.weightUnit(),
         patient: this.patient(),
         todaySymptoms: this.todaySymptoms(),
         prescriberUpdate: this.prescriberUpdate(),
@@ -498,10 +584,38 @@ export class CareStateService {
     this.showToast('Care plan update marked as read.', 'success');
   }
 
-  updateProfile(patch: Partial<Pick<PatientProfile, 'name' | 'dob' | 'baselineWeight' | 'lastVisitDate'>>): void {
+  updateProfile(
+    patch: Partial<
+      Pick<
+        PatientProfile,
+        'name' | 'dob' | 'heightInches' | 'baselineWeight' | 'startWeightLbs' | 'goalWeightLbs' | 'fluidLimitOz' | 'lastVisitDate'
+      >
+    >
+  ): void {
     this.patient.update(p => ({ ...p, ...patch }));
     this.alertAcknowledged.set(false);
-    this.showToast('Profile, baseline weight, and last visit saved.', 'success');
+    this.showToast('Profile, BMI metrics, and weight goal saved.', 'success');
+  }
+
+  adjustFluidIntake(deltaOz: number): void {
+    let nextOz = 0;
+    let limit = 50;
+    this.patient.update(p => {
+      limit = p.fluidLimitOz;
+      nextOz = Math.max(0, Math.min(120, p.fluidIntakeOz + deltaOz));
+      return { ...p, fluidIntakeOz: nextOz };
+    });
+    if (nextOz > limit && deltaOz > 0) {
+      this.showToast(`Fluid intake (${nextOz} oz) exceeded your ${limit} oz daily limit.`, 'alert');
+    }
+  }
+
+  convertWeight(lbs: number): number {
+    return this.weightUnit() === 'kg' ? Number((lbs * 0.453592).toFixed(1)) : Number(lbs.toFixed(1));
+  }
+
+  formatWeight(lbs: number): string {
+    return `${this.convertWeight(lbs).toFixed(1)} ${this.weightUnit()}`;
   }
 
   addMedication(med: Omit<MedicationItem, 'id' | 'takenToday'>): void {

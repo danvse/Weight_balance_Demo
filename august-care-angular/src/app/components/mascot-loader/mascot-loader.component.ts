@@ -47,7 +47,7 @@ export class MascotLoaderComponent implements AfterViewInit {
     if (!video) return;
     video.muted = true;
     video.defaultMuted = true;
-    if (typeof video.load === 'function') video.load();
+    video.playbackRate = 1.25;
     try {
       const p = video.play();
       if (p && typeof p.catch === 'function') {

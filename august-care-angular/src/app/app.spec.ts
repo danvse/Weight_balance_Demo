@@ -97,7 +97,7 @@ describe('August Care Angular RPM App', () => {
       const loaderVideo = fixture.nativeElement.querySelector('app-mascot-loader video') as HTMLVideoElement | null;
       expect(loaderVideo?.getAttribute('src')).toBe('mascot-loader.mp4');
 
-      await vi.advanceTimersByTimeAsync(1900);
+      await vi.advanceTimersByTimeAsync(1700);
       await navPromise;
       fixture.detectChanges();
 

@@ -99,7 +99,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 .animate-loader-bar {
-  animation: loaderFill 2s linear forwards;
+  animation: loaderFill 1.8s linear forwards;
 }
 
 @media (max-width: 767px) {

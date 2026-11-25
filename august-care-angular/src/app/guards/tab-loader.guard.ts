@@ -28,7 +28,7 @@ export const tabLoaderGuard: CanActivateFn = route => {
   care.tabLoadingLabel.set(ROUTE_LABELS[path] ?? 'Loading next page...');
   care.isTabLoading.set(true);
 
-  return timer(2000).pipe(
+  return timer(1800).pipe(
     map(() => true),
     finalize(() => care.isTabLoading.set(false))
   );

@@ -17,12 +17,12 @@
 @if (!care.isAuthenticated()) {
   <router-outlet />
 } @else {
-  @if (!care.isRedDashboardActive()) {
-    <app-hospital-bg
-      [videoSrc]="activeBackgroundVideo()"
-      scrimClass="fixed inset-0 bg-[#F8F7F2]/75 pointer-events-none z-0"
-    />
-  }
+  <app-hospital-bg
+    [videoSrc]="activeBackgroundVideo()"
+    [scrimClass]="care.isRedDashboardActive()
+      ? 'fixed inset-0 alert-crimson-scrim pointer-events-none z-0 transition-all duration-500'
+      : 'fixed inset-0 bg-[#F8F7F2]/75 pointer-events-none z-0 transition-all duration-500'"
+  />
 
   <div class="relative z-10 min-h-screen flex flex-col">
     <!-- Top Header -->

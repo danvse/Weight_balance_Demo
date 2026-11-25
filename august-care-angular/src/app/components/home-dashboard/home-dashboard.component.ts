@@ -10,40 +10,44 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
   imports: [RouterLink, CustomIconComponent, WeightTrendChartComponent],
   template: `
     <div class="space-y-6">
-      <!-- Urgent Red Alert Banner (>2 lbs weight change) -->
+      <!-- Refined Clinical Alert Card (>2 lbs weight change) -->
       @if (metrics().isConcerning) {
-        <div class="p-5 bg-white border-2 border-red-500 rounded-3xl shadow-xl space-y-3">
+        <div class="p-5 sm:p-6 bg-white/95 backdrop-blur-md border border-rose-200 border-l-4 border-l-rose-700 rounded-3xl shadow-[0_22px_48px_-14px_rgba(69,10,10,0.42)] animate-slide-up">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div class="flex items-start gap-3.5">
-              <div class="w-11 h-11 rounded-2xl bg-red-600 text-white flex items-center justify-center shrink-0 alert-beacon">
+            <div class="flex items-start gap-4">
+              <div class="w-11 h-11 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center justify-center shrink-0 relative">
                 <app-icon name="alertSiren" iconClass="w-6 h-6" />
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-600 absolute -top-1 -right-1 alert-beacon"></span>
               </div>
               <div>
                 <div class="flex flex-wrap items-center gap-2">
-                  <span class="text-sm font-extrabold uppercase tracking-wider text-red-700">Concerning Weight Alert (&gt;2 lbs)</span>
-                  <span class="px-2 py-0.5 bg-red-100 text-red-800 text-[10px] font-black rounded-full">ALARM ACTIVE</span>
+                  <span class="px-2.5 py-0.5 bg-rose-100 text-rose-800 text-[10px] font-bold uppercase tracking-wider rounded-full">Clinical Fluid Alert</span>
+                  <span class="text-[11px] font-semibold text-rose-700">Threshold &gt; 2.0 lbs exceeded</span>
                 </div>
-                <p class="text-xs sm:text-sm text-august-dark font-medium pt-1">
-                  Weight change of <b class="text-red-700 font-black">{{ maxDeltaFormatted() }}</b> detected from your mattress scale. Your prescriber has been sent an automatic update.
+                <h2 class="text-xl sm:text-2xl font-serif font-medium text-august-dark pt-1">
+                  Weight Increased by <span class="text-rose-700 font-bold">{{ maxDeltaFormatted() }}</span>
+                </h2>
+                <p class="text-xs sm:text-sm text-august-warmGray leading-relaxed pt-0.5">
+                  Your mattress scale logged a concerning fluid shift. Dr. Sarah Miller has been notified—please review your care instructions or send a message below.
                 </p>
               </div>
             </div>
 
-            <div class="flex items-center gap-2 shrink-0">
+            <div class="flex items-center gap-2.5 shrink-0">
               <a
                 routerLink="/chat"
-                class="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5"
+                class="px-4 py-2.5 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5"
               >
                 <app-icon name="chat" iconClass="w-4 h-4" />
-                <span>Message Prescriber</span>
+                <span>Message Dr. Miller</span>
               </a>
               <button
                 type="button"
                 (click)="care.playAlarmChime()"
-                class="px-3.5 py-2.5 bg-red-50 border border-red-200 text-red-700 font-bold text-xs rounded-xl hover:bg-red-100 flex items-center gap-1.5 transition"
+                class="px-3.5 py-2.5 bg-rose-50 border border-rose-200 text-rose-800 font-semibold text-xs rounded-xl hover:bg-rose-100 flex items-center gap-1.5 transition"
               >
                 <app-icon name="soundWave" iconClass="w-4 h-4" />
-                <span>Alarm Sound</span>
+                <span>Alert Tone</span>
               </button>
             </div>
           </div>
@@ -372,23 +376,24 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
 
     <!-- Concerning Weight Alarm Modal -->
     @if (care.symptomGateCompleted() && metrics().isConcerning && !care.alertAcknowledged()) {
-      <div class="fixed inset-0 bg-red-950/70 backdrop-blur-xs z-40 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border-2 border-red-500 space-y-5 animate-slide-up text-center">
-          <div class="w-16 h-16 rounded-2xl bg-red-600 text-white flex items-center justify-center mx-auto alert-beacon">
-            <app-icon name="alertSiren" iconClass="w-9 h-9" />
+      <div class="fixed inset-0 bg-rose-950/65 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+        <div class="bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-rose-200 space-y-5 animate-slide-up text-center">
+          <div class="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center justify-center mx-auto relative">
+            <app-icon name="alertSiren" iconClass="w-8 h-8" />
+            <span class="w-3 h-3 rounded-full bg-rose-600 absolute -top-1 -right-1 alert-beacon"></span>
           </div>
           <div class="space-y-1.5">
-            <span class="px-3 py-1 rounded-full bg-red-100 text-red-700 text-[11px] font-black uppercase tracking-wider">Urgent Weight Alert</span>
-            <h3 class="text-2xl font-serif font-bold text-august-dark pt-1">Concerning Weight Change Detected</h3>
+            <span class="px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold uppercase tracking-wider">Clinical Fluid Alert</span>
+            <h3 class="text-2xl font-serif font-medium text-august-dark pt-1">Concerning Weight Change Detected</h3>
             <p class="text-xs text-august-warmGray leading-relaxed">
-              Your mattress scale measured <b class="text-august-dark">{{ metrics().latestWeight.toFixed(1) }} lbs</b> (<b class="text-red-600">{{ maxDeltaFormatted() }}</b>), which exceeds your 2.0 lb safety limit. Your prescriber has been alerted.
+              Your mattress scale measured <b class="text-august-dark">{{ metrics().latestWeight.toFixed(1) }} lbs</b> (<b class="text-rose-700">{{ maxDeltaFormatted() }}</b>), which exceeds your 2.0 lb safety limit. Your prescriber has been alerted.
             </p>
           </div>
           <div class="flex flex-col sm:flex-row gap-2.5">
             <a
               routerLink="/chat"
               (click)="care.acknowledgeWeightAlert()"
-              class="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-1.5"
+              class="flex-1 py-3 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-1.5"
             >
               <app-icon name="chat" iconClass="w-4 h-4" />
               <span>Chat with Prescriber</span>

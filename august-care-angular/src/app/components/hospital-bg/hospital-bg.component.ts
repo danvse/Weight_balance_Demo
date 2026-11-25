@@ -27,6 +27,7 @@ import { AfterViewInit, Component, DestroyRef, ElementRef, effect, inject, input
 export class HospitalBgComponent implements AfterViewInit {
   readonly videoSrc = input<string | string[]>('hospital-bg.mp4');
   readonly scrimClass = input<string>('fixed inset-0 bg-[#F3F0E8]/35 pointer-events-none z-0');
+  readonly playbackRate = input<number>(1.0);
 
   private readonly destroyRef = inject(DestroyRef);
   private readonly videoA = viewChild<ElementRef<HTMLVideoElement>>('videoA');
@@ -48,6 +49,14 @@ export class HospitalBgComponent implements AfterViewInit {
       if (!this.initialized || sig === this.playlistSignature) return;
       this.switchPlaylist(nextList, sig);
     });
+
+    effect(() => {
+      const rate = this.getClampedRate();
+      const a = this.videoA()?.nativeElement;
+      const b = this.videoB()?.nativeElement;
+      if (a) this.applyRate(a, rate);
+      if (b) this.applyRate(b, rate);
+    });
   }
 
   ngAfterViewInit(): void {
@@ -67,6 +76,7 @@ export class HospitalBgComponent implements AfterViewInit {
     videos.forEach((v, idx) => {
       v.muted = true;
       v.defaultMuted = true;
+      this.applyRate(v);
       v.style.opacity = '1';
       v.style.zIndex = idx === 0 ? '2' : '1';
       v.style.transition = idx === 0 ? `opacity ${this.fadeMs}ms ease-in-out` : 'none';
@@ -77,7 +87,7 @@ export class HospitalBgComponent implements AfterViewInit {
       const current = videos[idx];
       if (!Number.isFinite(current.duration) || current.duration <= 0) return;
 
-      const fadeSec = Math.min(this.fadeMs / 1000, current.duration * 0.35);
+      const fadeSec = Math.min((this.fadeMs / 1000) * this.getClampedRate(), current.duration * 0.35);
       if (current.currentTime >= current.duration - fadeSec - 0.15) {
         this.advanceToNext(videos);
       }
@@ -120,6 +130,7 @@ export class HospitalBgComponent implements AfterViewInit {
     video.setAttribute('data-src', src);
     video.src = src;
     if (typeof video.load === 'function') video.load();
+    this.applyRate(video);
   }
 
   private switchPlaylist(nextList: string[], sig: string): void {
@@ -193,8 +204,19 @@ export class HospitalBgComponent implements AfterViewInit {
     }, this.fadeMs + 60);
   }
 
+  private getClampedRate(): number {
+    const rate = Number(this.playbackRate());
+    return Number.isFinite(rate) ? Math.max(0.25, Math.min(2.0, rate)) : 1.0;
+  }
+
+  private applyRate(video: HTMLVideoElement, rate = this.getClampedRate()): void {
+    video.defaultPlaybackRate = rate;
+    video.playbackRate = rate;
+  }
+
   private safePlay(video: HTMLVideoElement): void {
     try {
+      this.applyRate(video);
       const result = video.play();
       if (result && typeof result.catch === 'function') {
         result.catch(() => {

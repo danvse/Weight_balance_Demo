@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CareStateService } from '../../services/care-state.service';
 import { CustomIconComponent } from '../custom-icon/custom-icon.component';
@@ -73,24 +73,28 @@ import { CustomIconComponent } from '../custom-icon/custom-icon.component';
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
-                <label class="block text-august-warmGray font-bold mb-1">Starting Weight (lbs)</label>
-                <input [(ngModel)]="startWeightLbs" name="profStart" type="number" step="0.1" required class="w-full bg-august-ivory border border-august-border rounded-xl px-4 py-2.5 text-sm text-august-dark font-bold" />
+                <label class="block text-august-warmGray font-bold mb-1">Starting Weight ({{ care.weightUnit() }})</label>
+                <input [(ngModel)]="startWeightInput" name="profStart" type="number" step="0.1" required class="w-full bg-august-ivory border border-august-border rounded-xl px-4 py-2.5 text-sm text-august-dark font-bold" />
               </div>
               <div>
-                <label class="block text-august-warmGray font-bold mb-1">Target Goal Weight (lbs)</label>
-                <input [(ngModel)]="goalWeightLbs" name="profGoal" type="number" step="0.1" required class="w-full bg-august-ivory border border-august-border rounded-xl px-4 py-2.5 text-sm text-indigo-700 font-bold" />
+                <label class="block text-august-warmGray font-bold mb-1">Target Dry Weight ({{ care.weightUnit() }})</label>
+                <input [(ngModel)]="goalWeightInput" name="profGoal" type="number" step="0.1" required class="w-full bg-august-ivory border border-august-border rounded-xl px-4 py-2.5 text-sm text-indigo-700 font-bold" />
               </div>
               <div>
-                <label class="block text-august-warmGray font-bold mb-1">Dry Baseline Weight (lbs)</label>
-                <input [(ngModel)]="baselineWeight" name="profBase" type="number" step="0.1" required class="w-full bg-august-ivory border border-august-border rounded-xl px-4 py-2.5 text-sm text-august-dark font-bold" />
+                <label class="block text-august-warmGray font-bold mb-1">Dry Baseline Weight ({{ care.weightUnit() }})</label>
+                <input [(ngModel)]="baselineInput" name="profBase" type="number" step="0.1" required class="w-full bg-august-ivory border border-august-border rounded-xl px-4 py-2.5 text-sm text-august-dark font-bold" />
               </div>
               <div>
                 <label class="block text-august-warmGray font-bold mb-1">Daily Fluid Limit (oz)</label>
                 <input [(ngModel)]="fluidLimitOz" name="profFluid" type="number" min="16" max="128" required class="w-full bg-august-ivory border border-august-border rounded-xl px-4 py-2.5 text-sm text-august-dark font-bold" />
               </div>
-              <div class="sm:col-span-2">
+              <div>
                 <label class="block text-august-warmGray font-bold mb-1">Last Visit to Prescriber</label>
                 <input [(ngModel)]="lastVisitDate" name="profVisit" type="date" required class="w-full bg-august-ivory border border-august-border rounded-xl px-4 py-2.5 text-sm text-august-dark font-medium" />
+              </div>
+              <div>
+                <label class="block text-august-warmGray font-bold mb-1">Next Follow-Up Visit</label>
+                <input [(ngModel)]="nextVisitDate" name="profNextVisit" type="date" required class="w-full bg-august-ivory border border-august-border rounded-xl px-4 py-2.5 text-sm text-purple-800 font-medium" />
               </div>
             </div>
           </div>
@@ -188,11 +192,12 @@ export class PatientProfileComponent {
   dob = this.care.patient().dob;
   heightFeet = Math.floor(this.care.patient().heightInches / 12);
   heightRemainderInches = this.care.patient().heightInches % 12;
-  startWeightLbs = this.care.patient().startWeightLbs;
-  goalWeightLbs = this.care.patient().goalWeightLbs;
-  baselineWeight = this.care.patient().baselineWeight;
+  startWeightInput = this.care.convertWeight(this.care.patient().startWeightLbs);
+  goalWeightInput = this.care.convertWeight(this.care.patient().goalWeightLbs);
+  baselineInput = this.care.convertWeight(this.care.patient().baselineWeight);
   fluidLimitOz = this.care.patient().fluidLimitOz;
   lastVisitDate = this.care.patient().lastVisitDate;
+  nextVisitDate = this.care.patient().nextVisitDate;
 
   readonly addDrawerOpen = signal(false);
   newMedName = '';
@@ -200,14 +205,49 @@ export class PatientProfileComponent {
   newMedFreq = 'Once daily • Morning';
   newMedDiuretic = true;
 
+  constructor() {
+    effect(() => {
+      const p = this.care.patient();
+      this.care.weightUnit();
+      this.name = p.name;
+      this.dob = p.dob;
+      this.heightFeet = Math.floor(p.heightInches / 12);
+      this.heightRemainderInches = p.heightInches % 12;
+      this.startWeightInput = this.care.convertWeight(p.startWeightLbs);
+      this.goalWeightInput = this.care.convertWeight(p.goalWeightLbs);
+      this.baselineInput = this.care.convertWeight(p.baselineWeight);
+      this.fluidLimitOz = p.fluidLimitOz;
+      this.lastVisitDate = p.lastVisitDate;
+      this.nextVisitDate = p.nextVisitDate;
+    });
+  }
+
   saveProfile(): void {
-    const base = Number(this.baselineWeight);
-    const start = Number(this.startWeightLbs);
-    const goal = Number(this.goalWeightLbs);
+    const base = this.care.toLbs(Number(this.baselineInput));
+    const start = this.care.toLbs(Number(this.startWeightInput));
+    const goal = this.care.toLbs(Number(this.goalWeightInput));
     const totalInches = Number(this.heightFeet) * 12 + Number(this.heightRemainderInches);
 
-    if (!this.name.trim() || Number.isNaN(base) || base < 50 || base > 500 || totalInches < 48 || totalInches > 96) {
-      this.care.showToast('Please enter a valid name, height, and weights.', 'alert');
+    if (
+      !this.name.trim() ||
+      Number.isNaN(base) ||
+      base < 50 ||
+      base > 500 ||
+      Number.isNaN(start) ||
+      start < 50 ||
+      start > 500 ||
+      Number.isNaN(goal) ||
+      goal < 50 ||
+      goal > 500 ||
+      totalInches < 48 ||
+      totalInches > 96
+    ) {
+      this.care.showToast('Please enter a valid name, height (4–8 ft), and weights (50–500 lbs).', 'alert');
+      return;
+    }
+
+    if (goal > start) {
+      this.care.showToast('Target weight cannot exceed starting weight.', 'alert');
       return;
     }
 
@@ -219,7 +259,8 @@ export class PatientProfileComponent {
       goalWeightLbs: Number(goal.toFixed(1)),
       baselineWeight: Number(base.toFixed(1)),
       fluidLimitOz: Math.max(16, Math.min(128, Number(this.fluidLimitOz) || 50)),
-      lastVisitDate: this.lastVisitDate
+      lastVisitDate: this.lastVisitDate,
+      nextVisitDate: this.nextVisitDate
     });
   }
 

@@ -12,13 +12,13 @@ import { CustomIconComponent } from '../custom-icon/custom-icon.component';
       <!-- Chat Header -->
       <div class="p-4 bg-august-ivory border-b border-august-border flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <div class="w-11 h-11 rounded-2xl bg-august-forest text-white flex items-center justify-center font-serif font-bold text-base">SM</div>
+          <div class="w-11 h-11 rounded-2xl bg-august-forest text-white flex items-center justify-center font-serif font-bold text-base">{{ care.prescriberInitials() }}</div>
           <div>
             <div class="flex items-center gap-2">
               <h2 class="text-base font-bold text-august-dark">{{ care.patient().prescriberName }}</h2>
               <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
             </div>
-            <p class="text-xs text-august-warmGray">Cardiology Prescriber • Direct Care Chat</p>
+            <p class="text-xs text-august-warmGray">{{ care.patient().prescriberSpecialty }} • Direct Care Chat</p>
           </div>
         </div>
         <button
@@ -52,7 +52,7 @@ import { CustomIconComponent } from '../custom-icon/custom-icon.component';
             </div>
           } @else {
             <div class="flex items-end gap-2.5 max-w-xl">
-              <div class="w-8 h-8 rounded-xl bg-august-forest text-white flex items-center justify-center font-serif text-xs font-bold shrink-0">SM</div>
+              <div class="w-8 h-8 rounded-xl bg-august-forest text-white flex items-center justify-center font-serif text-xs font-bold shrink-0">{{ care.prescriberInitials() }}</div>
               <div class="bg-white px-4 py-3 rounded-2xl rounded-bl-xs shadow-xs border border-august-border text-xs sm:text-sm text-august-dark space-y-1">
                 <p class="leading-relaxed">{{ m.text }}</p>
                 <span class="text-[10px] text-august-warmGray block text-right">{{ m.time }}</span>
@@ -70,7 +70,7 @@ import { CustomIconComponent } from '../custom-icon/custom-icon.component';
             <span class="w-1.5 h-1.5 rounded-full bg-august-forest typing-dot"></span>
             <span class="w-1.5 h-1.5 rounded-full bg-august-forest typing-dot"></span>
           </div>
-          <span>Dr. Miller is typing...</span>
+          <span>{{ care.prescriberShortName() }} is typing...</span>
         </div>
       }
 
@@ -93,7 +93,7 @@ import { CustomIconComponent } from '../custom-icon/custom-icon.component';
           [(ngModel)]="draft"
           name="chatDraft"
           type="text"
-          placeholder="Ask Dr. Miller a question or mention symptoms..."
+          [placeholder]="'Ask ' + care.prescriberShortName() + ' a question or mention symptoms...'"
           class="flex-1 bg-august-ivory rounded-2xl px-4 py-3 text-xs sm:text-sm text-august-dark border border-august-border"
         />
         <button

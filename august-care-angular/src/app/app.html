@@ -79,6 +79,17 @@
 
         <button
           type="button"
+          (click)="care.toggleFastNavigation()"
+          [title]="care.fastNavigation() ? 'Fast Nav ON (Skip 1.8s transition)' : 'Mascot Transition ON (1.8s)'"
+          [class]="care.fastNavigation()
+            ? 'hidden sm:flex px-2.5 py-2 rounded-xl text-[11px] font-bold bg-indigo-50 border border-indigo-200 text-indigo-700 transition items-center gap-1'
+            : 'hidden sm:flex px-2.5 py-2 rounded-xl text-[11px] font-semibold bg-august-ivory border border-august-border text-august-warmGray hover:text-august-dark transition items-center gap-1'"
+        >
+          <span>{{ care.fastNavigation() ? '⚡ Fast Nav' : '🐾 1.8s Nav' }}</span>
+        </button>
+
+        <button
+          type="button"
           (click)="care.toggleAlertSimulation()"
           [class]="care.clinicalMetrics().isConcerning
             ? 'px-3 py-2 rounded-xl text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white transition flex items-center gap-1.5 shadow-xs'
@@ -176,6 +187,14 @@
       }
 
       <router-outlet />
+
+      <!-- Clinical Safety & Demo Scope Disclaimer Footer -->
+      <footer class="bg-white/90 backdrop-blur-sm border border-august-border rounded-2xl px-4 py-3 text-[11px] text-august-warmGray flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <span>
+          <b class="text-august-dark">Clinical Demo Disclaimer:</b> Alerts are reviewed asynchronously during clinic hours. Not for acute emergencies—call <b>911</b> for severe chest pain or breathing trouble.
+        </span>
+        <span class="font-semibold text-august-forest shrink-0">Prescriber: {{ care.patient().prescriberName }}</span>
+      </footer>
     </main>
 
     @if (care.userRole() === 'patient' && care.symptomGateCompleted()) {

@@ -22,13 +22,13 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
               <div>
                 <div class="flex flex-wrap items-center gap-2">
                   <span class="px-2.5 py-0.5 bg-rose-100 text-rose-800 text-[10px] font-bold uppercase tracking-wider rounded-full">Clinical Fluid Alert</span>
-                  <span class="text-[11px] font-semibold text-rose-700">Threshold &gt; 2.0 lbs exceeded</span>
+                  <span class="text-[11px] font-semibold text-rose-700">Threshold &gt; {{ care.formatWeight(2.0) }} exceeded</span>
                 </div>
                 <h2 class="text-xl sm:text-2xl font-serif font-medium text-august-dark pt-1">
                   Weight Increased by <span class="text-rose-700 font-bold">{{ maxDeltaFormatted() }}</span>
                 </h2>
                 <p class="text-xs sm:text-sm text-august-warmGray leading-relaxed pt-0.5">
-                  Your mattress scale logged a concerning fluid shift. Dr. Sarah Miller has been notified—please review your care instructions or send a message below.
+                  Your mattress scale logged a concerning fluid shift. {{ care.patient().prescriberName }} has been flagged for clinic review—please check your care instructions or send a message below.
                 </p>
               </div>
             </div>
@@ -39,7 +39,7 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
                 class="px-4 py-2.5 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5"
               >
                 <app-icon name="chat" iconClass="w-4 h-4" />
-                <span>Message Dr. Miller</span>
+                <span>Message {{ care.prescriberShortName() }}</span>
               </a>
               <button
                 type="button"
@@ -64,7 +64,7 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
             <div>
               <div class="text-sm font-extrabold uppercase tracking-wider text-red-800">Urgent Symptom Check: Breathing Trouble at Rest</div>
               <p class="text-xs sm:text-sm text-august-dark font-medium pt-1">
-                You reported shortness of breath even at rest. Please message Dr. Miller right away or seek urgent clinical evaluation if symptoms worsen.
+                You reported shortness of breath even at rest. Please message {{ care.prescriberShortName() }} right away or seek urgent clinical evaluation if symptoms worsen.
               </p>
             </div>
           </div>
@@ -88,7 +88,7 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
             <div>
               <div class="text-sm font-extrabold uppercase tracking-wider text-rose-800">Urgent Vitals Flag: {{ vitals().alertReasons.join(' • ') }}</div>
               <p class="text-xs sm:text-sm text-august-dark font-medium pt-1">
-                Morning reading logged <b>{{ vitals().summaryLabel }}</b>. Please sit or rest comfortably, hold extra diuretic doses if hypotensive, and notify Dr. Miller right away.
+                Morning reading logged <b>{{ vitals().summaryLabel }}</b>. Please sit or rest comfortably, hold extra diuretic doses if hypotensive, and notify {{ care.prescriberShortName() }} right away.
               </p>
             </div>
           </div>
@@ -350,7 +350,7 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
             <div class="p-3 rounded-2xl bg-purple-50/70 border border-purple-100 space-y-0.5">
               <span class="text-[10px] text-purple-800 uppercase tracking-wider font-bold block">Next Visit</span>
               <div class="font-serif font-bold text-august-dark text-sm sm:text-base">{{ care.formatFriendlyDate(care.patient().nextVisitDate) }}</div>
-              <span class="text-[11px] text-purple-800 font-semibold block">{{ daysUntilNextVisit() }} • Follow-up</span>
+              <span class="text-[11px] text-purple-800 font-semibold block">{{ care.daysUntilNextVisit() }} • Follow-up</span>
             </div>
             <div class="p-3 rounded-2xl bg-august-ivory border border-august-border space-y-0.5">
               <span class="text-[10px] text-august-warmGray uppercase tracking-wider font-bold block">Last Visit</span>
@@ -528,7 +528,7 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
           <div class="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-august-border shadow-sm space-y-4">
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-base font-bold text-august-dark">Weight Goal Progress</h3>
+                <h3 class="text-base font-bold text-august-dark">Target Dry Weight Progress</h3>
                 <p class="text-xs text-august-warmGray">
                   Started at {{ care.formatWeight(goal().startWeight) }} • Target {{ care.formatWeight(goal().goalWeight) }}
                 </p>
@@ -577,15 +577,19 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
             </div>
 
             <div
-              [class]="goal().onTrack
+              [class]="goal().onTrack && !vitals().isHypotensive
                 ? 'p-3 rounded-2xl bg-cyan-50 border border-cyan-100 text-xs text-cyan-900 font-semibold flex items-center gap-2'
                 : 'p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 font-semibold flex items-center gap-2'"
             >
-              <app-icon [name]="goal().onTrack ? 'checkSeal' : 'alertSiren'" iconClass="w-4 h-4 shrink-0" />
+              <app-icon [name]="goal().onTrack && !vitals().isHypotensive ? 'checkSeal' : 'alertSiren'" iconClass="w-4 h-4 shrink-0" />
               <span>
-                {{ goal().onTrack
-                  ? 'Good work! You have lost ' + care.formatWeight(goal().lostLbs) + ' and are on track.'
-                  : 'Fluid gain alert active—check in with Dr. Miller before adjusting your goal.' }}
+                @if (vitals().isHypotensive) {
+                  Weight reduction alongside low BP ({{ vitals().latest.systolicBp }}/{{ vitals().latest.diastolicBp }}) — check hydration with {{ care.prescriberShortName() }}.
+                } @else if (goal().onTrack) {
+                  On target: down {{ care.formatWeight(goal().lostLbs) }} toward your dry weight goal.
+                } @else {
+                  Fluid gain alert active—check in with {{ care.prescriberShortName() }} before adjusting your goal.
+                }
               </span>
             </div>
           </div>
@@ -910,7 +914,7 @@ import { WeightTrendChartComponent } from '../weight-trend-chart/weight-trend-ch
             <span class="px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold uppercase tracking-wider">Clinical Fluid Alert</span>
             <h3 class="text-2xl font-serif font-medium text-august-dark pt-1">Concerning Weight Change Detected</h3>
             <p class="text-xs text-august-warmGray leading-relaxed">
-              Your mattress scale measured <b class="text-august-dark">{{ care.formatWeight(metrics().latestWeight) }}</b> (<b class="text-rose-700">{{ maxDeltaFormatted() }}</b>), which exceeds your 2.0 lb safety limit. Your prescriber has been alerted.
+              Your mattress scale measured <b class="text-august-dark">{{ care.formatWeight(metrics().latestWeight) }}</b> (<b class="text-rose-700">{{ maxDeltaFormatted() }}</b>), which exceeds your {{ care.formatWeight(2.0) }} safety limit. {{ care.patient().prescriberName }} has been flagged.
             </p>
           </div>
           <div class="flex flex-col sm:flex-row gap-2.5">
@@ -948,7 +952,7 @@ export class HomeDashboardComponent {
   readonly isMedChecklistOpen = signal<boolean>(false);
 
   readonly maxDeltaFormatted = computed(() =>
-    this.formatUnitDelta(Math.max(this.metrics().overnightDelta, this.metrics().baselineDelta))
+    this.care.formatUnitDelta(Math.max(this.metrics().overnightDelta, this.metrics().baselineDelta))
   );
 
   readonly recentRows = computed(() => {
@@ -988,20 +992,7 @@ export class HomeDashboardComponent {
     return days.find(d => d.id === this.selectedCheckInId()) ?? days[days.length - 1];
   });
 
-  readonly daysUntilNextVisit = computed(() => {
-    const dateStr = this.care.patient().nextVisitDate;
-    if (!dateStr) return 'Scheduled';
-    const next = new Date(`${dateStr}T00:00:00`);
-    const refToday = new Date('2026-11-24T00:00:00');
-    const diffDays = Math.round((next.getTime() - refToday.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays <= 0) return 'Today';
-    if (diffDays === 1) return 'Tomorrow';
-    return `In ${diffDays} days`;
-  });
-
   formatUnitDelta(deltaLbs: number): string {
-    const val = this.care.convertWeight(deltaLbs);
-    const fixed = val.toFixed(1);
-    return `${val > 0 ? '+' : ''}${fixed} ${this.care.weightUnit()}`;
+    return this.care.formatUnitDelta(deltaLbs);
   }
 }

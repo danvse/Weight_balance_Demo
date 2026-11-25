@@ -187,4 +187,45 @@ describe('August Care Angular RPM App', () => {
     expect(care.weightHistory()[0].vitals?.spo2).toBe(90);
     expect(care.chatMessages().some(m => m.id === 'sys-symptom-today' && m.text.includes('Low SpO₂'))).toBe(true);
   });
+
+  it('should support prescriber branding, next visit updates, gate cancel, fast nav, and kg unit delta', () => {
+    const care = TestBed.inject(CareStateService);
+
+    expect(care.canDismissSymptomGate()).toBe(false);
+    care.submitSymptoms({
+      shortnessOfBreath: 'none',
+      poorAppetite: false,
+      hasSwelling: false,
+      swellingLocations: [],
+      swellingOther: '',
+      submittedAt: null
+    });
+    expect(care.canDismissSymptomGate()).toBe(true);
+
+    care.reopenSymptomGate();
+    expect(care.symptomGateCompleted()).toBe(false);
+    care.closeSymptomGateEditor();
+    expect(care.symptomGateCompleted()).toBe(true);
+
+    care.signUpAccount({
+      firstName: 'Marcus',
+      lastName: 'Lee',
+      role: 'prescriber',
+      dob: '1975-02-10',
+      email: 'marcus.lee@clinic.org'
+    });
+    expect(care.prescriberShortName()).toBe('Dr. Lee');
+    expect(care.prescriberInitials()).toBe('ML');
+
+    care.updateProfile({ nextVisitDate: '2026-12-20' });
+    expect(care.patient().nextVisitDate).toBe('2026-12-20');
+
+    care.weightUnit.set('kg');
+    expect(care.formatUnitDelta(2.0)).toBe('+0.9 kg');
+    expect(care.toLbs(care.convertWeight(172.0))).toBeCloseTo(172.0, 0);
+
+    expect(care.fastNavigation()).toBe(false);
+    care.toggleFastNavigation();
+    expect(care.fastNavigation()).toBe(true);
+  });
 });

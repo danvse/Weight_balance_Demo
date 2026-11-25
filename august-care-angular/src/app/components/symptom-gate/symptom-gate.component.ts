@@ -28,8 +28,20 @@ interface BodyRegionOption {
               </div>
               <h2 class="text-2xl font-serif text-august-dark font-medium">How are you feeling today?</h2>
             </div>
-            <div class="w-16 h-16 rounded-2xl bg-august-ivory border border-august-border p-1 shrink-0 shadow-xs overflow-hidden">
-              <img src="mascot.jpg" alt="Care Mascot" class="w-full h-full object-contain rounded-xl" />
+            <div class="flex items-center gap-2 shrink-0">
+              <div class="w-16 h-16 rounded-2xl bg-august-ivory border border-august-border p-1 shadow-xs overflow-hidden">
+                <img src="mascot.jpg" alt="Care Mascot" class="w-full h-full object-contain rounded-xl" />
+              </div>
+              @if (care.canDismissSymptomGate()) {
+                <button
+                  type="button"
+                  (click)="care.closeSymptomGateEditor()"
+                  aria-label="Cancel editing morning check"
+                  class="w-9 h-9 rounded-full bg-august-ivory hover:bg-slate-200 border border-august-border text-august-dark font-bold text-sm flex items-center justify-center transition"
+                >
+                  ✕
+                </button>
+              }
             </div>
           </div>
           <p class="text-xs text-august-warmGray leading-relaxed">
@@ -247,7 +259,7 @@ interface BodyRegionOption {
   `
 })
 export class SymptomGateComponent {
-  private readonly care = inject(CareStateService);
+  readonly care = inject(CareStateService);
 
   readonly breathOptions: { value: BreathStatus; label: string }[] = [
     { value: 'none', label: 'No, breathing normal' },

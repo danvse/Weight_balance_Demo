@@ -31,6 +31,7 @@ interface PersistedState {
   alertAcknowledged: boolean;
   currentRange: TimeRange;
   weightUnit: WeightUnit;
+  fastNavigation: boolean;
   patient: PatientProfile;
   todaySymptoms: SymptomCheck;
   prescriberUpdate: PrescriberUpdate;
@@ -48,6 +49,7 @@ const DEFAULT_PERSISTED: PersistedState = {
   alertAcknowledged: false,
   currentRange: 'days',
   weightUnit: 'lbs',
+  fastNavigation: false,
   patient: {
     name: 'Robert Davis',
     dob: '1958-04-14',
@@ -215,6 +217,7 @@ export class CareStateService {
   readonly alertAcknowledged = signal<boolean>(this.initial.alertAcknowledged);
   readonly currentRange = signal<TimeRange>(this.initial.currentRange);
   readonly weightUnit = signal<WeightUnit>(this.initial.weightUnit ?? 'lbs');
+  readonly fastNavigation = signal<boolean>(Boolean(this.initial.fastNavigation));
   readonly patient = signal<PatientProfile>(this.initial.patient);
   readonly todaySymptoms = signal<SymptomCheck>(this.initial.todaySymptoms);
   readonly prescriberUpdate = signal<PrescriberUpdate>(this.initial.prescriberUpdate);
@@ -250,8 +253,32 @@ export class CareStateService {
     };
   });
 
+  readonly canDismissSymptomGate = computed(() => Boolean(this.todaySymptoms().submittedAt));
+
+  readonly prescriberShortName = computed(() => {
+    const raw = this.patient().prescriberName.replace(/,\s*MD$/i, '').trim();
+    const parts = raw.split(' ').filter(Boolean);
+    if (parts.length >= 3 && parts[0].startsWith('Dr')) {
+      return `Dr. ${parts[parts.length - 1]}`;
+    }
+    return raw || 'your prescriber';
+  });
+
+  readonly prescriberInitials = computed(() => {
+    const raw = this.patient().prescriberName.replace(/^Dr\.?\s*/i, '').replace(/,\s*MD$/i, '').trim();
+    return (
+      raw
+        .split(' ')
+        .filter(Boolean)
+        .map(p => p[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase() || 'MD'
+    );
+  });
+
   readonly userInitials = computed(() => {
-    if (this.userRole() === 'prescriber') return 'SM';
+    if (this.userRole() === 'prescriber') return this.prescriberInitials();
     return (
       this.patient()
         .name.split(' ')
@@ -278,16 +305,33 @@ export class CareStateService {
       : 'Awaiting morning check-in';
   });
 
+  private localTodayMidnight(): Date {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
   readonly daysSinceLastVisit = computed(() => {
     const dateStr = this.patient().lastVisitDate;
     if (!dateStr) return 'Not recorded';
     const visit = new Date(`${dateStr}T00:00:00`);
-    const refToday = new Date('2026-11-24T00:00:00');
+    const refToday = this.localTodayMidnight();
     const diffDays = Math.round((refToday.getTime() - visit.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return '1 day ago';
     if (diffDays > 1) return `${diffDays} days ago`;
     return `In ${Math.abs(diffDays)} days`;
+  });
+
+  readonly daysUntilNextVisit = computed(() => {
+    const dateStr = this.patient().nextVisitDate;
+    if (!dateStr) return 'Scheduled';
+    const next = new Date(`${dateStr}T00:00:00`);
+    const refToday = this.localTodayMidnight();
+    const diffDays = Math.round((next.getTime() - refToday.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return `${Math.abs(diffDays)} days overdue`;
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Tomorrow';
+    return `In ${diffDays} days`;
   });
 
   readonly todaySymptomSeverity = computed<SymptomSeverity>(() =>
@@ -311,7 +355,7 @@ export class CareStateService {
     else category = 'Obese';
 
     const dob = new Date(`${p.dob || '1958-04-14'}T00:00:00`);
-    const ref = new Date('2026-11-25T00:00:00');
+    const ref = this.localTodayMidnight();
     let ageYears = ref.getFullYear() - dob.getFullYear();
     const mDiff = ref.getMonth() - dob.getMonth();
     if (mDiff < 0 || (mDiff === 0 && ref.getDate() < dob.getDate())) {
@@ -446,6 +490,7 @@ export class CareStateService {
         alertAcknowledged: this.alertAcknowledged(),
         currentRange: this.currentRange(),
         weightUnit: this.weightUnit(),
+        fastNavigation: this.fastNavigation(),
         patient: this.patient(),
         todaySymptoms: this.todaySymptoms(),
         prescriberUpdate: this.prescriberUpdate(),
@@ -528,6 +573,7 @@ export class CareStateService {
     if (data.role === 'prescriber') {
       const drName = fullName.startsWith('Dr.') ? fullName : `Dr. ${fullName}, MD`;
       this.patient.update(p => ({ ...p, prescriberName: drName }));
+      this.prescriberUpdate.update(u => ({ ...u, author: drName }));
       this.isAuthenticated.set(true);
       this.userRole.set('prescriber');
       this.showToast(`Welcome, ${drName}! Signed in to Prescriber EHR.`, 'success');
@@ -603,12 +649,13 @@ export class CareStateService {
       this.playAlarmChime();
     }
 
+    const doc = this.prescriberShortName();
     if (vitalsEval.isConcerning) {
-      this.showToast(`Urgent Vitals Alert: ${vitalsEval.alertReasons.join(', ')}. Contact Dr. Miller.`, 'alert');
+      this.showToast(`Urgent Vitals Alert: ${vitalsEval.alertReasons.join(', ')}. Contact ${doc}.`, 'alert');
     } else if (submitted.shortnessOfBreath === 'rest') {
-      this.showToast('Urgent: Breathing trouble at rest logged. Please contact Dr. Miller.', 'alert');
+      this.showToast(`Urgent: Breathing trouble at rest logged. Please contact ${doc}.`, 'alert');
     } else if (severity !== 'clear') {
-      this.showToast('Morning symptoms logged and shared with Dr. Miller in Chat.', 'info');
+      this.showToast(`Morning symptoms logged and shared with ${doc} in Chat.`, 'info');
     } else {
       this.showToast('Morning health check & vitals logged — looking good today!', 'success');
     }
@@ -714,6 +761,18 @@ export class CareStateService {
     this.symptomGateCompleted.set(false);
   }
 
+  closeSymptomGateEditor(): void {
+    if (this.canDismissSymptomGate()) {
+      this.symptomGateCompleted.set(true);
+    }
+  }
+
+  toggleFastNavigation(): void {
+    const next = !this.fastNavigation();
+    this.fastNavigation.set(next);
+    this.showToast(next ? 'Fast Navigation enabled (instant tab switch).' : 'Mascot Transition enabled (1.8s).', 'info');
+  }
+
   toggleAlertSimulation(): void {
     const metrics = this.clinicalMetrics();
     const prevWeight = this.weightHistory()[1]?.weight ?? this.patient().baselineWeight;
@@ -768,13 +827,13 @@ export class CareStateService {
     patch: Partial<
       Pick<
         PatientProfile,
-        'name' | 'dob' | 'heightInches' | 'baselineWeight' | 'startWeightLbs' | 'goalWeightLbs' | 'fluidLimitOz' | 'lastVisitDate'
+        'name' | 'dob' | 'heightInches' | 'baselineWeight' | 'startWeightLbs' | 'goalWeightLbs' | 'fluidLimitOz' | 'lastVisitDate' | 'nextVisitDate'
       >
     >
   ): void {
     this.patient.update(p => ({ ...p, ...patch }));
     this.alertAcknowledged.set(false);
-    this.showToast('Profile, BMI metrics, and weight goal saved.', 'success');
+    this.showToast('Profile, BMI metrics, and clinical dates saved.', 'success');
   }
 
   adjustFluidIntake(deltaOz: number): void {
@@ -794,8 +853,18 @@ export class CareStateService {
     return this.weightUnit() === 'kg' ? Number((lbs * 0.453592).toFixed(1)) : Number(lbs.toFixed(1));
   }
 
+  toLbs(val: number): number {
+    return this.weightUnit() === 'kg' ? val / 0.453592 : val;
+  }
+
   formatWeight(lbs: number): string {
     return `${this.convertWeight(lbs).toFixed(1)} ${this.weightUnit()}`;
+  }
+
+  formatUnitDelta(deltaLbs: number): string {
+    const val = this.convertWeight(deltaLbs);
+    const fixed = val.toFixed(1);
+    return `${val > 0 ? '+' : ''}${fixed} ${this.weightUnit()}`;
   }
 
   addMedication(med: Omit<MedicationItem, 'id' | 'takenToday'>): void {

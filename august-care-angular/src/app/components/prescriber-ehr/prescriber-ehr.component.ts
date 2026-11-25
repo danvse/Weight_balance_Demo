@@ -59,14 +59,14 @@ import { CustomIconComponent } from '../custom-icon/custom-icon.component';
                   <div class="font-bold text-sm text-august-dark">{{ care.patient().name }}</div>
                   <span class="text-[11px] text-august-warmGray">Sensor: {{ care.patient().serialNumber }}</span>
                 </td>
-                <td class="py-3.5 px-3 font-serif font-bold text-base">{{ metrics().latestWeight.toFixed(1) }} lbs</td>
+                <td class="py-3.5 px-3 font-serif font-bold text-base">{{ care.formatWeight(metrics().latestWeight) }}</td>
                 <td class="py-3.5 px-3">
                   <span
                     [class]="metrics().isConcerning
                       ? 'px-2.5 py-1 rounded-full bg-red-100 text-red-700 font-bold text-xs'
                       : 'px-2.5 py-1 rounded-full bg-august-sage text-august-forest font-bold text-xs'"
                   >
-                    {{ care.formatDelta(metrics().overnightDelta) }} {{ metrics().isConcerning ? '(High >2 lbs)' : '(Stable)' }}
+                    {{ care.formatUnitDelta(metrics().overnightDelta) }} {{ metrics().isConcerning ? '(High > ' + care.formatWeight(2.0) + ')' : '(Stable)' }}
                   </span>
                 </td>
                 <td [class]="hasSymFlag() ? 'py-3.5 px-3 text-red-700 font-semibold' : 'py-3.5 px-3 text-august-warmGray'">
@@ -105,8 +105,8 @@ import { CustomIconComponent } from '../custom-icon/custom-icon.component';
                   <div class="font-bold text-sm text-august-dark">Martha Jenkins</div>
                   <span class="text-[11px] text-august-warmGray">68 F • Post-MI</span>
                 </td>
-                <td class="py-3.5 px-3 font-serif font-bold text-base">142.1 lbs</td>
-                <td class="py-3.5 px-3"><span class="px-2.5 py-1 rounded-full bg-august-sage text-august-forest font-bold text-xs">-0.1 lbs (Stable)</span></td>
+                <td class="py-3.5 px-3 font-serif font-bold text-base">{{ care.formatWeight(142.1) }}</td>
+                <td class="py-3.5 px-3"><span class="px-2.5 py-1 rounded-full bg-august-sage text-august-forest font-bold text-xs">{{ care.formatUnitDelta(-0.1) }} (Stable)</span></td>
                 <td class="py-3.5 px-3 text-august-warmGray">
                   <div>No SOB • Normal appetite • No swelling</div>
                   <span class="inline-block mt-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-800 font-semibold text-[10px]">BP 122/76 • HR 68 • SpO₂ 98%</span>

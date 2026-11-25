@@ -33,17 +33,17 @@ interface PlottedNode extends ChartSeriesPoint {
       <div class="grid grid-cols-3 gap-2.5 bg-august-ivory/60 p-3 rounded-2xl border border-august-border/70 text-center">
         <div>
           <span class="text-[10px] font-bold uppercase tracking-wider text-august-warmGray block">Period Avg</span>
-          <span class="text-sm font-bold text-august-dark">{{ periodAvg() }} lbs</span>
+          <span class="text-sm font-bold text-august-dark">{{ care.formatWeight(periodAvgLbs()) }}</span>
         </div>
         <div class="border-x border-august-border">
           <span class="text-[10px] font-bold uppercase tracking-wider text-august-warmGray block">Vs. Baseline</span>
           <span [class]="latestVsBase() > 2.0 ? 'text-sm font-bold text-red-600' : 'text-sm font-bold text-august-forest'">
-            {{ care.formatDelta(latestVsBase()) }}
+            {{ care.formatUnitDelta(latestVsBase()) }}
           </span>
         </div>
         <div>
           <span class="text-[10px] font-bold uppercase tracking-wider text-august-warmGray block">Alert Limit</span>
-          <span class="text-sm font-bold text-august-dark">&gt; +2.0 lbs</span>
+          <span class="text-sm font-bold text-august-dark">&gt; +{{ care.formatWeight(2.0) }}</span>
         </div>
       </div>
 
@@ -62,13 +62,13 @@ interface PlottedNode extends ChartSeriesPoint {
             >
               <div class="font-bold text-white flex items-center justify-between gap-3">
                 <span>{{ tip.label }}</span>
-                <span [class]="tip.isHigh ? 'text-red-300' : 'text-emerald-300'">{{ tip.val.toFixed(1) }} lbs</span>
+                <span [class]="tip.isHigh ? 'text-red-300' : 'text-emerald-300'">{{ care.formatWeight(tip.val) }}</span>
               </div>
               <div class="text-slate-300 text-[10px] mt-0.5">
-                Vs. Baseline: <b>{{ care.formatDelta(tip.deltaBase) }}</b>
+                Vs. Baseline: <b>{{ care.formatUnitDelta(tip.deltaBase) }}</b>
               </div>
               <div class="text-slate-300 text-[10px]">
-                Step Change: <b>{{ care.formatDelta(tip.deltaPrev) }}</b> • {{ tip.syncTime }}
+                Step Change: <b>{{ care.formatUnitDelta(tip.deltaPrev) }}</b> • {{ tip.syncTime }}
               </div>
               @if (tip.symptomSummary) {
                 <div
@@ -114,7 +114,7 @@ interface PlottedNode extends ChartSeriesPoint {
               stroke-width="1.8"
             />
             <text x="560" [attr.y]="chart().baselineY + 4" font-size="10.5" font-weight="700" fill="#475569">
-              Base {{ chart().baseline.toFixed(1) }}
+              Base {{ care.convertWeight(chart().baseline).toFixed(1) }}
             </text>
 
             <defs>
@@ -188,7 +188,7 @@ interface PlottedNode extends ChartSeriesPoint {
                   font-weight="800"
                   [attr.fill]="node.isHigh ? '#B91C1C' : '#16221D'"
                 >
-                  {{ node.val.toFixed(1) }}
+                  {{ care.convertWeight(node.val).toFixed(1) }}
                 </text>
                 <text
                   [attr.x]="node.x"
@@ -268,10 +268,10 @@ export class WeightTrendChartComponent {
     });
   });
 
-  readonly periodAvg = computed(() => {
+  readonly periodAvgLbs = computed(() => {
     const s = this.series();
-    if (!s.length) return '0.0';
-    return (s.reduce((sum, item) => sum + item.val, 0) / s.length).toFixed(1);
+    if (!s.length) return 0;
+    return s.reduce((sum, item) => sum + item.val, 0) / s.length;
   });
 
   readonly latestVsBase = computed(() => {
@@ -322,9 +322,9 @@ export class WeightTrendChartComponent {
       polyPoints,
       areaPoints,
       guides: [
-        { y: getY(maxVal - 0.3), text: (maxVal - 0.3).toFixed(0) },
-        { y: getY(midVal), text: midVal.toFixed(0) },
-        { y: getY(minVal + 0.3), text: (minVal + 0.3).toFixed(0) }
+        { y: getY(maxVal - 0.3), text: this.care.convertWeight(maxVal - 0.3).toFixed(0) },
+        { y: getY(midVal), text: this.care.convertWeight(midVal).toFixed(0) },
+        { y: getY(minVal + 0.3), text: this.care.convertWeight(minVal + 0.3).toFixed(0) }
       ]
     };
   });

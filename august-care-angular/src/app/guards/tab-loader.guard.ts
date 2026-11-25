@@ -21,7 +21,7 @@ export const tabLoaderGuard: CanActivateFn = route => {
   }
   care.hasActivatedInitialPage = true;
 
-  if (router.url === `/${path}`) {
+  if (router.url === `/${path}` || care.fastNavigation()) {
     return true;
   }
 

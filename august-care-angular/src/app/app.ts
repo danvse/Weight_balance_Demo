@@ -22,18 +22,18 @@ export class App {
 
   private readonly currentUrl = signal<string>(this.router.url);
 
-  readonly activeBackgroundVideo = computed(() => {
+  readonly activeBackgroundVideo = computed<string[]>(() => {
     const url = this.currentUrl();
     if (this.care.userRole() === 'prescriber' || url.startsWith('/prescriber')) {
-      return 'clinic-bg.mp4';
+      return ['clinic-bg.mp4', 'consult-bg.mp4'];
     }
     if (url.startsWith('/chat')) {
-      return 'consult-bg.mp4';
+      return ['consult-bg.mp4', 'hospital-bg.mp4'];
     }
     if (url.startsWith('/profile')) {
-      return 'clinic-bg.mp4';
+      return ['clinic-bg.mp4', 'consult-bg.mp4'];
     }
-    return 'hospital-bg.mp4';
+    return ['hospital-bg.mp4', 'consult-bg.mp4'];
   });
 
   constructor() {

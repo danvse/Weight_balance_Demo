@@ -13,7 +13,7 @@ import { HospitalBgComponent } from '../hospital-bg/hospital-bg.component';
   template: `
     <section class="fixed inset-0 z-50 bg-[#F3F0E8] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       <app-hospital-bg
-        [videoSrc]="selectedAuthRole() === 'prescriber' ? 'clinic-bg.mp4' : 'atrium-bg.mp4'"
+        [videoSrc]="selectedAuthRole() === 'prescriber' ? ['clinic-bg.mp4', 'consult-bg.mp4'] : ['atrium-bg.mp4', 'consult-bg.mp4']"
         scrimClass="fixed inset-0 bg-[#F3F0E8]/35 pointer-events-none z-0"
       />
 

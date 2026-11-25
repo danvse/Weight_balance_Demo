@@ -25,7 +25,7 @@ import { AfterViewInit, Component, DestroyRef, ElementRef, effect, inject, input
   `
 })
 export class HospitalBgComponent implements AfterViewInit {
-  readonly videoSrc = input<string>('hospital-bg.mp4');
+  readonly videoSrc = input<string | string[]>('hospital-bg.mp4');
   readonly scrimClass = input<string>('fixed inset-0 bg-[#F3F0E8]/35 pointer-events-none z-0');
 
   private readonly destroyRef = inject(DestroyRef);
@@ -34,16 +34,19 @@ export class HospitalBgComponent implements AfterViewInit {
 
   private readonly fadeMs = 1400;
   private activeIdx: 0 | 1 = 0;
+  private playlist: string[] = ['hospital-bg.mp4'];
+  private playlistIdx = 0;
   private isFading = false;
   private fadeTimer: ReturnType<typeof setTimeout> | null = null;
-  private currentSrc = '';
+  private playlistSignature = '';
   private initialized = false;
 
   constructor() {
     effect(() => {
-      const nextSrc = this.videoSrc();
-      if (!this.initialized || nextSrc === this.currentSrc) return;
-      this.switchVideoSource(nextSrc);
+      const nextList = this.normalizePlaylist(this.videoSrc());
+      const sig = nextList.join('|');
+      if (!this.initialized || sig === this.playlistSignature) return;
+      this.switchPlaylist(nextList, sig);
     });
   }
 
@@ -53,16 +56,20 @@ export class HospitalBgComponent implements AfterViewInit {
     if (!a || !b) return;
 
     const videos: [HTMLVideoElement, HTMLVideoElement] = [a, b];
-    this.currentSrc = this.videoSrc();
+    this.playlist = this.normalizePlaylist(this.videoSrc());
+    this.playlistSignature = this.playlist.join('|');
+    this.playlistIdx = 0;
+
+    const secondSrc = this.playlist[1 % this.playlist.length];
+    this.setVideoSource(a, this.playlist[0]);
+    this.setVideoSource(b, secondSrc);
 
     videos.forEach((v, idx) => {
       v.muted = true;
       v.defaultMuted = true;
-      v.src = this.currentSrc;
       v.style.opacity = '1';
       v.style.zIndex = idx === 0 ? '2' : '1';
       v.style.transition = idx === 0 ? `opacity ${this.fadeMs}ms ease-in-out` : 'none';
-      if (typeof v.load === 'function') v.load();
     });
 
     const onTick = (idx: 0 | 1) => {
@@ -72,15 +79,13 @@ export class HospitalBgComponent implements AfterViewInit {
 
       const fadeSec = Math.min(this.fadeMs / 1000, current.duration * 0.35);
       if (current.currentTime >= current.duration - fadeSec - 0.15) {
-        this.startCrossfade(videos);
+        this.advanceToNext(videos);
       }
     };
 
     const onEnded = (idx: 0 | 1) => {
-      if (idx !== this.activeIdx) return;
-      if (!this.isFading) {
-        this.startCrossfade(videos);
-      }
+      if (idx !== this.activeIdx || this.isFading) return;
+      this.advanceToNext(videos);
     };
 
     const onTimeA = () => onTick(0);
@@ -105,15 +110,26 @@ export class HospitalBgComponent implements AfterViewInit {
     });
   }
 
-  private switchVideoSource(nextSrc: string): void {
+  private normalizePlaylist(raw: string | string[]): string[] {
+    const arr = (Array.isArray(raw) ? raw : [raw]).filter(Boolean);
+    return arr.length ? arr : ['hospital-bg.mp4'];
+  }
+
+  private setVideoSource(video: HTMLVideoElement, src: string): void {
+    if (video.getAttribute('data-src') === src) return;
+    video.setAttribute('data-src', src);
+    video.src = src;
+    if (typeof video.load === 'function') video.load();
+  }
+
+  private switchPlaylist(nextList: string[], sig: string): void {
     const a = this.videoA()?.nativeElement;
     const b = this.videoB()?.nativeElement;
     if (!a || !b) return;
 
-    this.currentSrc = nextSrc;
-    const videos: [HTMLVideoElement, HTMLVideoElement] = [a, b];
-    const nextIdx: 0 | 1 = this.activeIdx === 0 ? 1 : 0;
-    const nextVideo = videos[nextIdx];
+    this.playlist = nextList;
+    this.playlistSignature = sig;
+    this.playlistIdx = 0;
 
     if (this.fadeTimer) {
       clearTimeout(this.fadeTimer);
@@ -121,12 +137,21 @@ export class HospitalBgComponent implements AfterViewInit {
     }
     this.isFading = false;
 
-    nextVideo.src = nextSrc;
-    if (typeof nextVideo.load === 'function') nextVideo.load();
-    this.startCrossfade(videos, nextSrc);
+    const videos: [HTMLVideoElement, HTMLVideoElement] = [a, b];
+    const standbyIdx: 0 | 1 = this.activeIdx === 0 ? 1 : 0;
+    this.setVideoSource(videos[standbyIdx], this.playlist[0]);
+
+    this.crossfadeToTarget(videos, 0);
   }
 
-  private startCrossfade(videos: [HTMLVideoElement, HTMLVideoElement], syncOtherSrc?: string): void {
+  private advanceToNext(videos: [HTMLVideoElement, HTMLVideoElement]): void {
+    const nextPlaylistIdx = (this.playlistIdx + 1) % this.playlist.length;
+    const standbyIdx: 0 | 1 = this.activeIdx === 0 ? 1 : 0;
+    this.setVideoSource(videos[standbyIdx], this.playlist[nextPlaylistIdx]);
+    this.crossfadeToTarget(videos, nextPlaylistIdx);
+  }
+
+  private crossfadeToTarget(videos: [HTMLVideoElement, HTMLVideoElement], targetPlaylistIdx: number): void {
     this.isFading = true;
     const fromIdx = this.activeIdx;
     const toIdx: 0 | 1 = fromIdx === 0 ? 1 : 0;
@@ -152,10 +177,10 @@ export class HospitalBgComponent implements AfterViewInit {
       fromVideo.style.transition = 'none';
       fromVideo.style.zIndex = '1';
       fromVideo.pause();
-      if (syncOtherSrc) {
-        fromVideo.src = syncOtherSrc;
-        if (typeof fromVideo.load === 'function') fromVideo.load();
-      }
+
+      // Preload the subsequent clip into the standby layer for the next transition
+      const preloadPlaylistIdx = (targetPlaylistIdx + 1) % this.playlist.length;
+      this.setVideoSource(fromVideo, this.playlist[preloadPlaylistIdx]);
       fromVideo.currentTime = 0;
       fromVideo.style.opacity = '1';
 
@@ -163,6 +188,7 @@ export class HospitalBgComponent implements AfterViewInit {
       toVideo.style.transition = `opacity ${this.fadeMs}ms ease-in-out`;
 
       this.activeIdx = toIdx;
+      this.playlistIdx = targetPlaylistIdx;
       this.isFading = false;
     }, this.fadeMs + 60);
   }
